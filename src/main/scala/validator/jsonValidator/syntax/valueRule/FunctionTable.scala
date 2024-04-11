@@ -54,12 +54,16 @@ case class FunctionTable(functionTable: Map[String, PredicateMaker]) {
     val check =
       functionTable.get(name)
         .map(_(args))
-        .getOrElse( Left(new ExprError(s"Undefined-function: $name")) )   //todo
+        .getOrElse( Left(new ExprError(s"syntax error :: undefined-function :: $name")) )   //todo
 
     Predicate(check, name, args.toList)
   }
 
-  def wordy: String = StringUtil.show( functionTable.keys.toList.sorted.mkString("=== Functions ===\n\t","\n\t","\n============\n"))
+  def wordy: String =
+    StringUtil.show(
+      functionTable.keys
+        .toList.sorted.mkString("=== Functions ===\n\t","\n\t","\n============\n")
+    )
 }
 
 object FunctionTable {
@@ -83,8 +87,10 @@ object PredicateMaker {
 
   private def toStringOr(s: String) = Right(s)
 
-  private def ofLen(l: Seq[String], n: Int)
-  : Either[SyntaxError, Seq[String]] = if( l.length == n) Right(l) else s"arg-count must $n".exprError
+  private def ofLen(name: String, l: Seq[String], n: Int)
+  : Either[SyntaxError, Seq[String]] =
+    if( l.length == n) Right(l)
+    else s"syntax error :: $name :: arg-count must $n".exprError
 
   private def ofType0[T](name: String,
                         conv: String => Either[SyntaxError, T])
@@ -100,7 +106,7 @@ object PredicateMaker {
                         len: Int,
                         conv: String => Either[SyntaxError, T])
                        (toPred: Seq[T] => JPredicate)
-  = PredicateMaker( name, args => ofLen(args, len)
+  = PredicateMaker( name, args => ofLen(name, args, len)
       .flatMap { l =>
         val (lefts, rights) = l.take(len).map(conv).partitionMap(identity)
         if (lefts.nonEmpty) lefts.mkString(s"$name : (", ",", ")").exprError

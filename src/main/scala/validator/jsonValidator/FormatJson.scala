@@ -73,7 +73,7 @@ case class FormatValue( syntax: List[SyntaxValue]= Nil ) extends FormatJson {
 
 object FormatValue {
 
-  def apply( expr: String): Either[ExprError, FormatValue] = {
+  def apply( expr: String): Either[SyntaxError, FormatValue] = {
     SyntaxValue(expr).map(s => FormatValue(List(s)))
   }
 

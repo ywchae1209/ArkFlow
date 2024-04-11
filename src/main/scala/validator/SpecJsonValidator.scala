@@ -23,11 +23,11 @@ object SpecJsonValidator extends App {
   {
     "TRT_INFO": { 														### 진료이력
       "TRT_KEY": "(_isString && gt(10)) && lt(1000) || _oneOf(1234-456,abcdef, hig, this, is, good, day, 'this is good day')",											### "1234-111aa-dasdsad",
-      "YYK_ID": "_longerThan(10, 11)",											### "41359160", // 요양기관 기호
+      "YYK_ID": "_longerThan(10,11)",											### "41359160", // 요양기관 기호
       "PAT_ID": "_digit",											### "1", // 환자번호
       "INSURE_TYPE": "_any( a, b)",									### "건강보험", // 보험유형명
       "INSURE_TYPE_CD": "_any",							### "P01", // 보험유형코드
-      "DEPT_CD": "_any",											### "D01", // 진료과목코드
+      "DEPT_CD": "_my",											### "D01", // 진료과목코드
       "DEPT_NM": "_any",											### "내과", // 진료과목명
       "DR_NM": "_any",												### "갑돌이", // 의사명
       "RCPT_GB": "_oneOf(입원,외래,응급,퇴원,중간)",											### "외래", // 영수증 유형 [입원,외래,응급,퇴원,중간]

@@ -4,7 +4,7 @@ import org.json4s.JValue
 import validator.jsonValidator.syntax.valueRule.PredicateMaker.UserFunctionTable
 import validator.jsonValidator.syntax.valueRule.ValueBoolTree.FunctionExpr
 import validator.jsonValidator.syntax.valueRule.ValueRuleParser
-import validator.jsonValidator.{EvaluationError, ExprError}
+import validator.jsonValidator.{EvaluationError, ExprError, SyntaxError}
 
 case class SyntaxValue(expr: FunctionExpr) {
 
@@ -16,10 +16,15 @@ case class SyntaxValue(expr: FunctionExpr) {
 
 object SyntaxValue {
 
-  def apply(expr: String): Either[ExprError, SyntaxValue] = {
+  def apply(expr: String): Either[SyntaxError, SyntaxValue] = {
       ValueRuleParser.parse(expr)
         .left.map( ExprError(_))
-        .map( SyntaxValue(_))
+        .flatMap{ f =>
+          f.checkSyntaxWith(UserFunctionTable)
+            .map(e => Left(e))
+            .getOrElse(Right( SyntaxValue(f)))
+
+        }
   }
 }
 

@@ -1,7 +1,7 @@
 package validator
 
 import org.json4s.jackson.Serialization.writePretty
-import org.json4s.{DefaultFormats, JValue}
+import org.json4s.{DefaultFormats, JArray, JObject, JValue}
 import validator.jsonValidator.{Fails, FormatJson, SyntaxError}
 import validator.utils.JsonUtil.StringWithJsonPower
 import validator.utils.StringUtil
@@ -12,6 +12,8 @@ import scala.collection.immutable.HashMap
 case class JsonValidator( rules: Map[String, FormatJson],
                           syntaxError: Map[String, SyntaxError] ) {
 
+  implicit val formats: DefaultFormats.type = DefaultFormats
+
   def evaluate(id: String, json: String): ValidateResult = {
 
     rules.get(id).map{ fj =>
@@ -19,6 +21,24 @@ case class JsonValidator( rules: Map[String, FormatJson],
       ValidateResult(ret)
     }.getOrElse( ValidateResult(Left(s"rule($id) not exist")))
 
+  }
+
+  def showErrors(): String = {
+    val js = JArray(
+        syntaxError
+          .map(kv => JObject(kv._1 -> kv._2.toJson))
+          .toList )
+
+    writePretty(js)
+  }
+
+  def showRules( id: String): String = {
+    val js = JArray(
+      rules
+        .map(kv => JObject(kv._1 -> kv._2.toJson))
+        .toList )
+
+    writePretty(js)
   }
 
   def findCandidate(json: String): List[String] = {

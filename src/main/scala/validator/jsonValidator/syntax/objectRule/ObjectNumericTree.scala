@@ -1,8 +1,9 @@
-package validator.validate.syntax.objectRule
+package validator.jsonValidator.syntax.objectRule
 
 import validator.utils.May.{mayOr, maybe}
-import validator.validate.syntax.objectRule.ObjectNumericTree.NumericOperator.{cal0, fromInt}
-import validator.validate.{EvalError, EvaluationError, ExprErrors, SyntaxError}
+import validator.utils.StringUtil.{show, wordy}
+import validator.jsonValidator.syntax.objectRule.ObjectNumericTree.NumericOperator.{cal0, fromInt}
+import validator.jsonValidator.{EvalError, EvaluationError, ExprErrors, SyntaxError}
 
 object ObjectNumericTree {
 
@@ -16,7 +17,7 @@ object ObjectNumericTree {
   case object Divide extends NumericOperator { override def toString: String = "/" }
 
   object NumericOperator {
-    def fromInt[T:Numeric](i: Int) = implicitly[Numeric[T]].fromInt(i)
+    def fromInt[T:Numeric](i: Int): T = implicitly[Numeric[T]].fromInt(i)
 
     def cal0[T: Numeric](l: T, r: T, op: NumericOperator)(e: => String): Either[String, T] = {
 
@@ -39,12 +40,12 @@ object ObjectNumericTree {
         case Divide => div(l, r)
       }
 
-//      println( s"$l $op $r :: $ret")
+      wordy( s"$l $op $r :: $ret")
       ret
     }
   }
 
-  type NumOp = (NumericOperator, NumericExpression)
+  private type NumOp = (NumericOperator, NumericExpression)
 
   ////////////////////////////////////////////////////////////////////////////////
   sealed trait NumericExpression {
@@ -61,7 +62,7 @@ object ObjectNumericTree {
 
   case class Term(path: String, default: Option[Int] = None) extends NumericExpression {
 
-    val str0 = default.map(_.toString).getOrElse("_")
+    val str0: String = default.map(_.toString).getOrElse("_")
     override def toString: String = s"$${$path:$str0}"
 
     override def calculateWith[T: Numeric](f: String => Either[String, T])
@@ -71,7 +72,7 @@ object ObjectNumericTree {
         s => default
           .map{ i =>
             val neo = fromInt(i)
-            println(s"$path not found, use default : $neo")
+            wordy(s"$path not found, use default : $neo")
             neo
           }.toRight(new EvalError(s"$path => $s")),
         t => Right(t)
@@ -82,7 +83,7 @@ object ObjectNumericTree {
   }
 
   object Term {
-    def apply(direction: String) = {
+    def apply(direction: String): Term = {
 
       val trim = direction.trim
       val (d, k) = trim.reverse.span(_ != ':')
@@ -94,7 +95,7 @@ object ObjectNumericTree {
         case (_, _) => new Term(trim, None)
       }
 
-//      println(s"$direction\tTerm( key= ${ret.path}, default= ${ret.str0})")
+      wordy(s"$direction\tTerm( key= ${ret.path}, default= ${ret.str0})")
       ret
     }
 
@@ -131,36 +132,36 @@ object ObjectNumericTree {
   }
 }
 
-object SpecSONADT extends App {
-
-  import ObjectRuleParser._
-
-  val s = "${key1:11} + ${path_2} - (${key9:11} / ${path_2} * ( ${path_3} + ${path_4} )) / ${path_5}  + ${path_6} * 12 - ${path_11} + ${path_12} * ${path_13__4:5} + ${path_14} / ${path:15} + ${path:16} "
-
-  val m= Map(
-    "key1_1"	    -> 1,
-    "path_2"      -> 2,
-    "path_3"      -> 3,
-    "path_4"      -> 4,
-    "path_5"      -> 6,
-    "path_6"      -> 6,
-    "path_11"     -> 11,
-    "path_12"     -> 12,
-    "path_13"     -> 13,
-    "path_14"     -> 14,
-    "path_15"     -> 15,
-    "path_16"     -> 16,
-  )
-
-  val f: String => Either[String, Double] = (s: String) => m.get(s).map(_.toDouble).toRight( s"not-found: $s")
-
-  val expr = parseNumeric(s)
-
-  expr.foreach(println)
-
-  expr.foreach( _.checkSyntaxWith(f).foreach(println))
-
-  val z = expr.map( _.calculateWith(f))
-
-  println(z)
-}
+//object SpecObjectNumericTree extends App {
+//
+//  import ObjectRuleParser._
+//
+//  val s = "${key1:11} + ${path_2} - (${key9:11} / ${path_2} * ( ${path_3} + ${path_4} )) / ${path_5}  + ${path_6} * 12 - ${path_11} + ${path_12} * ${path_13__4:5} + ${path_14} / ${path:15} + ${path:16} "
+//
+//  val m= Map(
+//    "key1_1"	    -> 1,
+//    "path_2"      -> 2,
+//    "path_3"      -> 3,
+//    "path_4"      -> 4,
+//    "path_5"      -> 6,
+//    "path_6"      -> 6,
+//    "path_11"     -> 11,
+//    "path_12"     -> 12,
+//    "path_13"     -> 13,
+//    "path_14"     -> 14,
+//    "path_15"     -> 15,
+//    "path_16"     -> 16,
+//  )
+//
+//  val f: String => Either[String, Double] = (s: String) => m.get(s).map(_.toDouble).toRight( s"not-found: $s")
+//
+//  val expr = parseNumeric(s)
+//
+//  expr.foreach(show)
+//
+//  expr.foreach( _.checkSyntaxWith(f).foreach(show))
+//
+//  val z = expr.map( _.calculateWith(f))
+//
+//  show(z)
+//}

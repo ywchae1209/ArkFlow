@@ -1,10 +1,11 @@
-package validator.validate
+package validator.jsonValidator
 
 import org.json4s.{JArray, JField, JNull, JObject, JString, JValue}
 import validator.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
-import validator.validate.ExprError.StringWithExprErrorPower
-import validator.validate.FormatObject.{objectSyntaxKey, optionDefault}
-import validator.validate.syntax.{SyntaxObject, SyntaxValue}
+import validator.utils.StringUtil.{show, wordy}
+import validator.jsonValidator.ExprError.StringWithExprErrorPower
+import validator.jsonValidator.FormatObject.{objectSyntaxKey, optionDefault}
+import validator.jsonValidator.syntax.{SyntaxObject, SyntaxValue}
 
 ////////////////////////////////////////////////////////////////////////////////
 sealed trait FormatJson extends ToJson {
@@ -15,14 +16,6 @@ sealed trait FormatJson extends ToJson {
 
 object FormatJson {
 
-  val FormatAny: FormatPred = FormatPred(j => Right(j))
-
-  val FormatAnyValue: FormatPred = FormatPred {
-    case j@JArray(_) => TypeError(j ,s"must be JValue, but JArray")
-    case j@JObject(_) => TypeError(j, s"must be JValue, but JObject")
-    case j => Right(j)
-  }
-
   def apply(s: String,
             sepLine: String = "\n",
             lineComment: String = "###")
@@ -32,7 +25,7 @@ object FormatJson {
 
     val jstr = lines.mkString(sepLine)
 
-    println( "===== un-commented rule =====\n" + jstr + "\n=============================\n" )
+    wordy( "===== un-commented rule =====\n" + jstr + "\n=============================\n" )
 
     val jv = jstr.toJValueOr.left.map( ExprError(_))
 
@@ -136,7 +129,7 @@ case class FormatObject(fields: Map[String, FormatJson],
                         syntax: Option[(SyntaxObject, Boolean)] = None) extends FormatJson {
 
   private val syntaxObject = syntax.map(_._1)
-  private val syntaxObjectAsFloat = syntax.map(_._2).getOrElse(false)
+  private val syntaxObjectAsFloat = syntax.exists(_._2)
 
   private val syntaxString = syntaxObject.map( _.toString).getOrElse("")
   private val objectSyntaxFalse = ObjectSyntaxFalse( syntaxString)
@@ -205,15 +198,16 @@ case class FormatObject(fields: Map[String, FormatJson],
 
 object FormatObject {
 
-  val empty = JObject()
+  val empty: JObject = JObject()
 
   val objectSyntaxKey = "$$$$"
-  val optionPrefix = "_?_:"
 
-  val optionPrefixLen = optionPrefix.length
-  val optionDefault = JNull
+  private val optionPrefix = "_?_:"
+  private val optionPrefixLen = optionPrefix.length
 
-  def mayOptionalField(k: String, f: FormatJson)
+  val optionDefault: JNull.type = JNull
+
+  private def mayOptionalField(k: String, f: FormatJson)
   : (String, FormatJson) = {
     if( k.startsWith(optionPrefix))
       k.drop(optionPrefixLen) -> FormatOptional(f)
@@ -228,7 +222,7 @@ object FormatObject {
       .toOption
       .map{ s =>
         val r = SyntaxObject(s)
-        r.left.foreach(println)
+        r.left.foreach(show)
         r
       }.partitionMap(identity)
 
@@ -263,7 +257,7 @@ case class FormatOptional( format: FormatJson) extends FormatJson {
   }
 
   override def ifNotExist(key: String): Either[Fails, JValue] = {
-    println( s"INFO [ Optional ] key-not-exist-but-ok( $key )")
+    wordy( s"INFO [ Optional ] key-not-exist-but-ok( $key )")
     Right(optionDefault)
   }
   override def toJson: JValue = JObject( "Optional" -> format.toJson )

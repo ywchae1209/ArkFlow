@@ -1,10 +1,10 @@
-package validator.validate.syntax
+package validator.jsonValidator.syntax
 
 import org.json4s.JValue
-import validator.validate.syntax.valueRule.PredicateMaker.UserFunctionTable
-import validator.validate.syntax.valueRule.ValueBoolTree.FunctionExpr
-import validator.validate.syntax.valueRule.ValueRuleParser
-import validator.validate.{EvaluationError, ExprError}
+import validator.jsonValidator.syntax.valueRule.PredicateMaker.UserFunctionTable
+import validator.jsonValidator.syntax.valueRule.ValueBoolTree.FunctionExpr
+import validator.jsonValidator.syntax.valueRule.ValueRuleParser
+import validator.jsonValidator.{EvaluationError, ExprError}
 
 case class SyntaxValue(expr: FunctionExpr) {
 

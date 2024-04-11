@@ -1,16 +1,11 @@
-package validator.validate.syntax.valueRule
+package validator.jsonValidator.syntax.valueRule
 
 import org.json4s.{JString, JValue}
-import validator.validate.{EvalError, EvalErrors, EvaluationError, ExprError, ExprErrors, SyntaxError}
-import validator.validate.syntax.valueRule.ValueBoolTree.FunctionOperator.eval
+import validator.utils.StringUtil.{show, wordy}
+import validator.jsonValidator._
+import validator.jsonValidator.syntax.valueRule.ValueBoolTree.FunctionOperator.eval
 
 object ValueBoolTree {
-
-  def toValueStntaxRule(s: String)
-  : Either[String, FunctionExpr] = {
-    ValueRuleParser.parse(s)
-  }
-
 
   ////////////////////////////////////////////////////////////////////////////////
   // SyntaxValue ADT
@@ -20,13 +15,13 @@ object ValueBoolTree {
   case object Or extends FunctionOperator { override def toString: String = "||" }
 
   object FunctionOperator {
-    def eval( l: Boolean, r: Boolean, op: FunctionOperator) = op match {
+    def eval( l: Boolean, r: Boolean, op: FunctionOperator): Boolean = op match {
       case And => l && r
       case Or  => l || r
     }
   }
 
-  type FunctionOp = (FunctionOperator, FunctionExpr)
+  private type FunctionOp = (FunctionOperator, FunctionExpr)
 
   ////////////////////////////////////////////////////////////////////////////////
   trait FunctionExpr {
@@ -68,7 +63,7 @@ object ValueBoolTree {
             t => Right(eval(b, t, op)) )
         }
       }
-      //ret.foreach( b => if(!b) println(s"${this.toString} == false"))
+      ret.foreach( b => if(!b) wordy(s"${this.toString} == false"))
       ret
     }
 
@@ -85,22 +80,22 @@ object ValueBoolTree {
 
 }
 
-object SpecSVPAdt extends App {
-
-  import validator.validate.syntax.valueRule.PredicateMaker.UserFunctionTable
-
-  val s = "f(1) || _myfuction(abc) || _oneOf('this is test', good) && gt(1) &&  lt(2000) && _between( 1, 1000) || _isString && _longerThan(1) || _oneOf(a, b, b, 'this is \\'' ) && _regex(1,2,3) || _shorterThan(a)"
-  val r = ValueRuleParser.parse(s)
-  println("=== expression ===")
-  r.foreach(println)
-
-  val jv: JValue = JString("this")
-
-  println(jv)
-
-  r.map(_.checkSyntaxWith(UserFunctionTable).foreach(println))
-
-  val zz = r.map(_.evaluateWith(UserFunctionTable)(jv))
-}
+//object SpecValueBoolTree extends App {
+//
+//  import validator.jsonValidator.syntax.valueRule.PredicateMaker.UserFunctionTable
+//
+//  val s = "f(1) || _myfuction(abc) || _oneOf('this is test', good) && gt(1) &&  lt(2000) && _between( 1, 1000) || _isString && _longerThan(1) || _oneOf(a, b, b, 'this is \\'' ) && _regex(1,2,3) || _shorterThan(a)"
+//  val r = ValueRuleParser.parse(s)
+//  show("=== expression ===")
+//  r.foreach(show)
+//
+//  val jv: JValue = JString("this")
+//
+//  show(jv)
+//
+//  r.map(_.checkSyntaxWith(UserFunctionTable).foreach(show))
+//
+//  val zz = r.map(_.evaluateWith(UserFunctionTable)(jv))
+//}
 
 

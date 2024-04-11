@@ -4,13 +4,13 @@ package validator.utils
 
 object May {
 
-  def show(str: String, level: Int = 0) = {
+  def log(str: String, level: Int = 0): Unit = {
     println(str)
   }
 
   def state(str: => String)
   : Unit = {
-    show(s"[ State ] ========== $str ==========")
+    log(s"[ State ] ========== $str ==========")
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ object May {
   def warn[A](a: => Option[A])(str: => String)
   : Option[A] = {
     if (a.isEmpty)
-      show(s"[ Warn ] : None = $str")
+      log(s"[ Warn ] : None = $str")
     a
   }
 
@@ -80,10 +80,9 @@ object May {
     def apply[T](cal0: () => T) = new Lazy(cal0)
     def unit[T](cal0: => T) = new Lazy(() => cal0)
 
-    def map2[T,U,V]( lt: Lazy[T], lu: Lazy[U])(f: (T, U) => V)
+    def map2[T,U,V]( lt: Lazy[T], lu: Lazy[U])(f: (T, U) => V): Lazy[V]
     = Lazy( () => f(lt.apply(), lu.apply()) )
 
   }
-
 
 }

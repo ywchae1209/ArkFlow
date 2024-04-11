@@ -9,7 +9,7 @@ import scala.annotation.tailrec
 object JsonUtil {
 
   ////////////////////////////////////////////////////////////////////////////////
-  def toJValue(str: String)= {
+  def toJValue(str: String): Either[String, JValue] = {
     mayOr( JsonMethods.parse(str) )("Invalid JSON string")
   }
 
@@ -23,7 +23,7 @@ object JsonUtil {
 
   def getJValue(j: JValue, route: Seq[String])
   : Either[String, JValue] = getJValue0(j, route) match {
-    case JNothing => Left(s"not exist: ${route} in $j")
+    case JNothing => Left(s"not exist: $route in $j")
     case jv => Right(jv)
   }
 
@@ -137,7 +137,7 @@ object JsonUtil {
     def toJValue()
     : JValue = JsonUtil.toJValue(str).getOrElse(JNothing)
 
-    def toJValueOr() = JsonUtil.toJValue(str)
+    def toJValueOr(): Either[String, JValue] = JsonUtil.toJValue(str)
 
   }
 

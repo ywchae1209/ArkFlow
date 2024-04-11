@@ -1,12 +1,13 @@
-package validator.validate.syntax.valueRule
+package validator.jsonValidator.syntax.valueRule
 
 import org.json4s.{JDecimal, JDouble, JInt, JLong, JValue}
-import validator.utils.JsonUtil.{JValueWithPower, getLong}
+import validator.utils.JsonUtil._
 import validator.utils.StringUtil
-import validator.validate.EvalError.StringWithSyntaxPower
-import validator.validate.ExprError.StringWithExprErrorPower
-import validator.validate.syntax.valueRule.Predicate.JPredicate
-import validator.validate.{EvalError, EvalSyntaxErr, EvaluationError, ExprError, SyntaxError}
+import validator.utils.StringUtil.{show, wordy}
+import validator.jsonValidator.EvalError.StringWithSyntaxPower
+import validator.jsonValidator.ExprError.StringWithExprErrorPower
+import validator.jsonValidator.syntax.valueRule.Predicate.JPredicate
+import validator.jsonValidator.{EvalError, EvalSyntaxErr, EvaluationError, ExprError, SyntaxError}
 
 import scala.collection.immutable.{HashMap, HashSet}
 import scala.math.BigDecimal.long2bigDecimal
@@ -18,7 +19,7 @@ case class Predicate (check: Either[SyntaxError, JPredicate ],
                       args: List[String] ) {
 
   def getSyntaxError: Option[SyntaxError] = check.fold( Option(_), _ => None)
-  lazy val mayError = check.fold( EvalSyntaxErr[JPredicate], Right(_) )
+  private lazy val mayError = check.fold( EvalSyntaxErr[JPredicate], Right(_) )
 
   def apply(jv: JValue) : Either[EvaluationError, Boolean] = {
     mayError.flatMap( f =>
@@ -27,7 +28,7 @@ case class Predicate (check: Either[SyntaxError, JPredicate ],
 
       ret.left.foreach{ s =>
         val msg = s"$s : i'll judge as false"
-        println( args.mkString( s"Predicate :: $name(", ", ", s") == $msg"))
+        wordy( args.mkString( s"Predicate :: $name(", ", ", s") == $msg"))
       }
 
       ret.fold( _ => Right(false), r => Right(r))
@@ -58,7 +59,7 @@ case class FunctionTable(functionTable: Map[String, PredicateMaker]) {
     Predicate(check, name, args.toList)
   }
 
-  def show = println( functionTable.keys.toList.sorted.mkString("=== Functions ===\n\t","\n\t","\n============\n"))
+  def wordy: String = StringUtil.show( functionTable.keys.toList.sorted.mkString("=== Functions ===\n\t","\n\t","\n============\n"))
 }
 
 object FunctionTable {
@@ -67,7 +68,7 @@ object FunctionTable {
     val m = predicateMaker.groupBy(_.name)
     val f = m.filter(_._2.length > 1)
     if( f.nonEmpty )
-      println( f.keys.mkString("Duplicate function-name: [",", ", "]" ))
+      show( f.keys.mkString("Syntax Error:: Duplicate function-name: [",", ", "]" ))
 
     new FunctionTable(
       HashMap( m.map( kv => kv._1 -> kv._2.head).toList:_* )
@@ -119,49 +120,49 @@ object PredicateMaker {
   private def ofString(n: String, l: Int)( f: Seq[String] => JPredicate) = ofType[String](n, l, toStringOr)(f)
 
   ////////////////////////////////////////////////////////////////////////////////
-  val _any        = ofString0("_any")(_ => _ => Right(true))
+  private val _any        = ofString0("_any")(_ => _ => Right(true))
 
-  val gt          = ofLong("gt", 1)( args => Calc.gt(args.head)(_) )
-  val lt          = ofLong("lt", 1)( args => Calc.lt(args.head)(_) )
-  val gte         = ofLong("gte", 1)( args => Calc.gte(args.head)(_) )
-  val lte         = ofLong("lte", 1)( args => Calc.lte(args.head)(_) )
-  val between     = ofLong("between", 2)( args => Calc.between(args.head, args(1))(_) )
+  private val gt          = ofLong("gt", 1)( args => Calc.gt(args.head)(_) )
+  private val lt          = ofLong("lt", 1)( args => Calc.lt(args.head)(_) )
+  private val gte         = ofLong("gte", 1)(args => Calc.gte(args.head)(_) )
+  private val lte         = ofLong("lte", 1)(args => Calc.lte(args.head)(_) )
+  private val between     = ofLong("between", 2)(args => Calc.between(args.head, args(1))(_) )
 
-  val gt0         = ofDouble("gt0", 1)( args => Calc.gt(args.head)(_) )
-  val lt0         = ofDouble("lt0", 1)( args => Calc.lt(args.head)(_) )
-  val gte0        = ofDouble("gte0", 1)( args => Calc.gte(args.head)(_) )
-  val lte0        = ofDouble("lte0", 1)( args => Calc.lte(args.head)(_) )
-  val between0    = ofDouble("between0", 2)( args => Calc.between(args.head, args(1))(_) )
-
-  ////////////////////////////////////////////////////////////////////////////////
-  val _isString   = ofString0("_isString")(_ => Calc._isString)
-
-  val _oneOf      = ofString0("_oneOf")(args => Calc._oneOf(args)(_))
-  val _digit      = ofString0("_digit")(args => Calc._digitOr(Nil))
-  val _digitOr    = ofString0("_digitOr")(args => Calc._digitOr(args))
-  val _charsIn    = ofString0("_charsIn")(args => Calc._charsIn(args))
-  val _regex      = ofString0("_regex")(args => Calc._regex(args))
-  val _date       = ofString0("_date")(args => Calc._date(args))
-
-  val _length     = ofLong0("_length")(args => Calc._length(args))
-  val _longerThan = ofLong("_longerThan", 1)(args => Calc._longerThan(args.head))
-  val _shorterThan= ofLong("_shorterThan", 1)(args => Calc._shorterThan(args.head))
-
-  val _lt         = ofLong("_lt", 1)(args => Calc._lt(args.head))
-  val _gt         = ofLong("_gt", 1)(args => Calc._gt(args.head))
-  val _lte        = ofLong("_lte", 1)(args => Calc._lte(args.head))
-  val _gte        = ofLong("_gte", 1)(args => Calc._gte(args.head))
-  val _between    = ofLong("_between", 2)(args => Calc._between(args.head, args(1)))
-
-  val _lt0        = ofDouble("_lt0", 1)(args => Calc._lt0(args.head))
-  val _gt0        = ofDouble("_gt0", 1)(args => Calc._gt0(args.head))
-  val _lte0       = ofDouble("_lte0", 1)(args => Calc._lte0(args.head))
-  val _gte0       = ofDouble("_gte0", 1)(args => Calc._gte0(args.head))
-  val _between0   = ofDouble("_between0", 2)(args => Calc._between0(args.head, args(1)))
+  private val gt0         = ofDouble("gt0", 1)(args => Calc.gt(args.head)(_) )
+  private val lt0         = ofDouble("lt0", 1)(args => Calc.lt(args.head)(_) )
+  private val gte0        = ofDouble("gte0", 1)(args => Calc.gte(args.head)(_) )
+  private val lte0        = ofDouble("lte0", 1)(args => Calc.lte(args.head)(_) )
+  private val between0    = ofDouble("between0", 2)(args => Calc.between(args.head, args(1))(_) )
 
   ////////////////////////////////////////////////////////////////////////////////
+  private val _isString   = ofString0("_isString")(_ => Calc._isString)
 
-  val UserFunctionTable = FunctionTable(
+  private val _oneOf      = ofString0("_oneOf")(args => Calc._oneOf(args)(_))
+  private val _digit      = ofString0("_digit")(args => Calc._digitOr(Nil))
+  private val _digitOr    = ofString0("_digitOr")(args => Calc._digitOr(args))
+  private val _charsIn    = ofString0("_charsIn")(args => Calc._charsIn(args))
+  private val _regex      = ofString0("_regex")(args => Calc._regex(args))
+  private val _date       = ofString0("_date")(args => Calc._date(args))
+
+  private val _length     = ofLong0("_length")(args => Calc._length(args))
+  private val _longerThan = ofLong("_longerThan", 1)(args => Calc._longerThan(args.head))
+  private val _shorterThan= ofLong("_shorterThan", 1)(args => Calc._shorterThan(args.head))
+
+  private val _lt         = ofLong("_lt", 1)(args => Calc._lt(args.head))
+  private val _gt         = ofLong("_gt", 1)(args => Calc._gt(args.head))
+  private val _lte        = ofLong("_lte", 1)(args => Calc._lte(args.head))
+  private val _gte        = ofLong("_gte", 1)(args => Calc._gte(args.head))
+  private val _between    = ofLong("_between", 2)(args => Calc._between(args.head, args(1)))
+
+  private val _lt0        = ofDouble("_lt0", 1)(args => Calc._lt0(args.head))
+  private val _gt0        = ofDouble("_gt0", 1)(args => Calc._gt0(args.head))
+  private val _lte0       = ofDouble("_lte0", 1)(args => Calc._lte0(args.head))
+  private val _gte0       = ofDouble("_gte0", 1)(args => Calc._gte0(args.head))
+  private val _between0   = ofDouble("_between0", 2)(args => Calc._between0(args.head, args(1)))
+
+  ////////////////////////////////////////////////////////////////////////////////
+
+  val UserFunctionTable: FunctionTable = FunctionTable(
     _any,
     gt, lt, gte, lte, between,
     gt0, lt0, gte0, lte0, between0,
@@ -171,7 +172,7 @@ object PredicateMaker {
     _date, _length, _longerThan, _shorterThan,
   )
 
-  UserFunctionTable.show
+  UserFunctionTable.wordy
 
 }
 
@@ -184,28 +185,28 @@ object Calc {
   = (jv: JValue) => jv.getString.fold( EvalError(_), Right(_))
 
   val _isString: JValue => Either[EvalError, Boolean]
-  =  (jv) => getString(jv).map( _ => true)
+  =  jv => getString(jv).map( _ => true)
 
-  def _oneOf(args: Seq[String]) = (jv: JValue) => {
+  def _oneOf(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     getString(jv).map( s => args.contains(s))
   }
 
-  def _digitOr(args: Seq[String]) = (jv: JValue) => {
+  def _digitOr(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     val set = HashSet.apply( args.mkString.toList.distinct: _*)
     getString(jv).map( s => s.forall(c => c.isDigit || set.contains(c)) )
   }
 
-  def _charsIn(args: Seq[String]) = (jv: JValue) => {
+  def _charsIn(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     val set = HashSet.apply( args.mkString.toList.distinct: _*)
     getString(jv).map( s => s.forall(c => c.isDigit || set.contains(c)) )
   }
 
-  def _regex(args: Seq[String]) = (jv: JValue) => {
+  def _regex(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     val regex = args.map( _.r)
     getString(jv).map( s => regex.exists( _.findFirstIn(s).nonEmpty) )
   }
 
-  def _date( args: Seq[String]) = (jv: JValue) => {
+  def _date( args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     val map = Map("yyyy" -> "[12][0-9][0-9][0-9]", "mm" -> "[01][0-9]", "dd" -> "[0-3][0-9]")
     val sts = args.map( s => StringUtil.interpolate(map.get)(s) )
     val regex = sts.map( _.r)
@@ -213,25 +214,25 @@ object Calc {
     getString(jv).map( s => regex.exists( _.findFirstIn(s).nonEmpty))
   }
 
-  def _length(args: Seq[Long]) = (jv: JValue) => {
+  def _length(args: Seq[Long]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     getString(jv).map( s => args.contains(s.length) )
   }
 
-  def _longerThan(args: Long) = (jv: JValue) => { getString(jv).map( _.length > args) }
-  def _shorterThan(args: Long) = (jv: JValue) => { getString(jv).map( _.length < args) }
+  def _longerThan(args: Long): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).map( _.length > args) }
+  def _shorterThan(args: Long): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).map( _.length < args) }
 
-  def _lt(n: Long)  = (jv: JValue) => { getString(jv).flatMap( s => toLongOr(s)).map( _ < n) }
-  def _lte(n: Long) = (jv: JValue) => { getString(jv).flatMap( s => toLongOr(s)).map( _ <= n) }
-  def _gt(n: Long)  = (jv: JValue) => { getString(jv).flatMap( s => toLongOr(s)).map( _ > n) }
-  def _gte(n: Long) = (jv: JValue) => { getString(jv).flatMap( s => toLongOr(s)).map( _ >= n) }
-  def _between(b: Long, t: Long) = (jv: JValue) => { getString(jv).flatMap( s => toLongOr(s)).map( n => b <= n && n <= t) }
+  def _lt(n: Long): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toLongOr(s)).map( _ < n) }
+  def _lte(n: Long): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toLongOr(s)).map( _ <= n) }
+  def _gt(n: Long): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toLongOr(s)).map( _ > n) }
+  def _gte(n: Long): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toLongOr(s)).map( _ >= n) }
+  def _between(b: Long, t: Long): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toLongOr(s)).map(n => b <= n && n <= t) }
 
 
-  def _lt0(n: Double)  = (jv: JValue) => { getString(jv).flatMap( s => toDoubleOr(s)).map( _ < n) }
-  def _lte0(n: Double) = (jv: JValue) => { getString(jv).flatMap( s => toDoubleOr(s)).map( _ <= n) }
-  def _gt0(n: Double)  = (jv: JValue) => { getString(jv).flatMap( s => toDoubleOr(s)).map( _ > n) }
-  def _gte0(n: Double) = (jv: JValue) => { getString(jv).flatMap( s => toDoubleOr(s)).map( _ >= n) }
-  def _between0(b: Double, t: Double) = (jv: JValue) => { getString(jv).flatMap( s => toDoubleOr(s)).map( n => b <= n && n <= t) }
+  def _lt0(n: Double): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toDoubleOr(s)).map( _ < n) }
+  def _lte0(n: Double): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toDoubleOr(s)).map( _ <= n) }
+  def _gt0(n: Double): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toDoubleOr(s)).map( _ > n) }
+  def _gte0(n: Double): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toDoubleOr(s)).map( _ >= n) }
+  def _between0(b: Double, t: Double): JValue => Either[EvalError, Boolean] = (jv: JValue) => { getString(jv).flatMap(s => toDoubleOr(s)).map(n => b <= n && n <= t) }
 
   def between[T: Numeric](from: T, to: T)(jv: JValue)
   : Either[EvalError, Boolean]
@@ -263,9 +264,9 @@ object Calc {
     case _ => EvalError(s"not numeric: $jv")
   }
 
-  def lt[T: Numeric](bottom: T)(jv: JValue) = gte(bottom)(jv).map(b => !b)
+  def lt[T: Numeric](bottom: T)(jv: JValue): Either[EvalError, Boolean] = gte(bottom)(jv).map(b => !b)
 
-  def lte[T: Numeric](bottom: T)(jv: JValue) = gt(bottom)(jv).map(b => !b)
+  def lte[T: Numeric](bottom: T)(jv: JValue): Either[EvalError, Boolean] = gt(bottom)(jv).map(b => !b)
 
 }
 

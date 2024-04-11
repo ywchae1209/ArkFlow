@@ -1,10 +1,10 @@
-package validator.validate.syntax
+package validator.jsonValidator.syntax
 
 import org.json4s.JValue
 import validator.utils.JsonUtil.JValueWithPower
-import validator.validate.{EvalErrors, ExprError, ExprErrors}
-import validator.validate.syntax.objectRule.ObjectBoolTree.BoolOps
-import validator.validate.syntax.objectRule.ObjectRuleParser
+import validator.jsonValidator.{EvalErrors, ExprError, ExprErrors}
+import validator.jsonValidator.syntax.objectRule.ObjectBoolTree.BoolOps
+import validator.jsonValidator.syntax.objectRule.ObjectRuleParser
 
 case class SyntaxObject( syntaxBool: List[(BoolOps, String)]) {
 

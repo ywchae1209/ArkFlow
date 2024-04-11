@@ -1,4 +1,4 @@
-package validator.validate.syntax.valueRule
+package validator.jsonValidator.syntax.valueRule
 
 import fastparse.NoWhitespace._
 import fastparse._

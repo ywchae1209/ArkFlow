@@ -1,15 +1,16 @@
-package validator.validate
+package validator.jsonValidator
 
 import org.json4s.JsonAST.JObject
 import org.json4s.jackson.Serialization.writePretty
 import org.json4s.{DefaultFormats, JArray, JString, JValue}
+import validator.utils.StringUtil
 
 trait ToJson{
   def toJson: JValue
 
-  def show(header: String) =  {
+  def show(header: String= ""): String =  {
     implicit val formats: DefaultFormats.type = DefaultFormats
-    println(header + "\n" + writePretty(toJson))
+    StringUtil.show(header + "\n" + writePretty(toJson))
   }
 }
 
@@ -41,7 +42,7 @@ object ExprErrors{
 }
 object ExprError {
   implicit class StringWithExprErrorPower(s: String) {
-    def exprError[T] = Left(new ExprError(s))
+    def exprError[T]: Left[ExprError, Nothing] = Left(new ExprError(s))
   }
 }
 
@@ -50,12 +51,11 @@ object ExprError {
 sealed trait EvaluationError extends ToJson
 
 case class EvalErrors( es: List[EvaluationError]) extends EvaluationError{
-  override def toJson = JArray( es.map(_.toJson))
-
+  override def toJson: JValue = JArray( es.map(_.toJson))
 }
 
 case class EvalError(e: String) extends EvaluationError {
-  override def toJson = JString(e)
+  override def toJson: JValue = JString(e)
 }
 
 case class EvalSyntaxErr(syntaxError: SyntaxError ) extends EvaluationError {
@@ -110,7 +110,7 @@ case class TypeError(value: JValue, e: String) extends Fails{
 }
 
 case class FieldError(k: String, fails: Fails) extends Fails {
-  override def toJson = fails.toJson  // should not be called directly.
+  override def toJson: JValue = fails.toJson  // should not be called directly.
 }
 
 case class ValueError( es: List[EvaluationError]) extends Fails {
@@ -122,7 +122,7 @@ case class ValueError( es: List[EvaluationError]) extends Fails {
 
 case class ObjectSyntaxFalse( e: String) extends Fails {
   override def toJson = JObject(
-    "type" -> JString("Object-syntax result is false"),
+    "type" -> JString("Object-Evaluation result is false"),
     "expression" -> JString(e),
     "result" -> JString("false")
   )
@@ -130,7 +130,7 @@ case class ObjectSyntaxFalse( e: String) extends Fails {
 
 case class ObjectSyntaxError( es: EvaluationError) extends Fails {
   override def toJson = JObject(
-    "type" -> JString("Object-syntax-check Error"),
+    "type" -> JString("Object-Evaluation Error"),
     "error" -> es.toJson
   )
 }
@@ -138,16 +138,16 @@ case class ObjectSyntaxError( es: EvaluationError) extends Fails {
 case class ObjectError( es: List[Fails]) extends Fails {
   override def toString: String = es.mkString( "{ ", ",\n", " }")
 
-  val warning = "This must not happen!!!\t"
+  private val warning = "This must not happen!!!\t"
 
-  def toJson = {
+  def toJson: JValue = {
     val (lefts, rights) = {
       es.map {
         case FieldError(k, f) => Right(k -> f.toJson)
         case e@ObjectSyntaxError(_) => Right( "$$$$" -> e.toJson )
         case o@ObjectSyntaxFalse(_) => Right( "$$$$" -> o.toJson )
         case o =>
-          println(s"ObjectError ::: $warning : $o")
+          StringUtil.show(s"ObjectError ::: $warning : $o")
           Left(o.toJson)
       }.partitionMap(identity)
     }
@@ -162,7 +162,7 @@ case class ObjectError( es: List[Fails]) extends Fails {
 
 case class ArrayError( es: List[Fails]) extends Fails {
   override def toString: String = es.mkString( "[ ", ",\n", " ]")
-  override def toJson = JArray( es.map( _.toJson))
+  override def toJson: JValue = JArray( es.map( _.toJson))
 }
 
 ////////////////////////////////////////////////////////////////////////////////

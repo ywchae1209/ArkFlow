@@ -1,13 +1,8 @@
 package validator
 
-import org.json4s.DefaultFormats
-import org.json4s.jackson.Serialization.writePretty
-import validator.utils.JsonUtil.StringWithJsonPower
-import validator.validate.{FormatJson, SyntaxError}
-
 import scala.io.Source.fromResource
 
-object HiWebNet {
+object SpecJsonValidator extends App {
 
 //  val FT = FunctionTable(
 //    _any,
@@ -163,29 +158,19 @@ object HiWebNet {
 ]
 """
 
-}
-
-object SpecHiWebNet extends App {
-
-  implicit val formats: DefaultFormats.type = DefaultFormats
 
   val path = "lemon\\from.json"
-  val resc = fromResource(path).mkString
-  val root = resc.toJValue()
+  val jstr = fromResource(path).mkString
 
-  val rule: Either[SyntaxError, FormatJson] = FormatJson(HiWebNet.ruleString)
+  val id = "hiwebnet"
+  val jv: JsonValidator = JsonValidator(id, ruleString)
+  val result = jv.evaluate(id, jstr )
 
-  rule.fold(
-    se => se.show("=== syntax error ==="),
-    fj => fj.show("=== format json rule ===") )
+  result.show()
+//  println( s"isFail        : ${result.isFail()}")
+//  println( s"isSuccess     : ${result.isSuccess()}")
+//  println( s"getFailReason -----------------:\n ${result.getFailReason()}")
+//  println( s"getSuccess    -----------------:\n ${result.getSuccess()}")
 
-
-  val extr = rule.map( r => r.evaluate(root) )
-  extr.fold(
-    se => println(se),
-    _.fold(
-      f => f.show("=== Not Valid ==="),
-      j => println(writePretty(j))
-    )
-  )
 }
+

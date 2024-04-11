@@ -5,13 +5,13 @@ import java.time.format.DateTimeFormatter
 
 object TimeUtil {
 
-  val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss SSS")
+  val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss SSS")
 
   def current(): String = timeString(currentTime)
 
   def currentTime: Long = System.currentTimeMillis()
 
-  def dateTime(tm: Long): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(tm), ZoneId.systemDefault());
+  def dateTime(tm: Long): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(tm), ZoneId.systemDefault())
 
   def timeString(tm: Long): String = formatter.format(dateTime(tm))
 
@@ -19,7 +19,7 @@ object TimeUtil {
 
   ////////////////////////////////////////////////////////////////////////////////
 
-  def timeLog[A](f: => A)(log: String => Unit = s => May.show(s, 0)): A = {
+  def timeLog[A](f: => A)(log: String => Unit = s => May.log(s, 0)): A = {
     val s = currentTime
     val ret = f
     val e = currentTime

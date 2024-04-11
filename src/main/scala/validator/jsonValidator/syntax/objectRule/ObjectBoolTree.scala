@@ -1,8 +1,9 @@
-package validator.validate.syntax.objectRule
+package validator.jsonValidator.syntax.objectRule
 
-import validator.validate.{EvalErrors, EvaluationError, ExprErrors, SyntaxError}
-import validator.validate.syntax.objectRule.ObjectBoolTree.BoolOperator.eval
-import validator.validate.syntax.objectRule.ObjectNumericTree._
+import validator.utils.StringUtil.{show, wordy}
+import validator.jsonValidator.{EvalErrors, EvaluationError, ExprErrors, SyntaxError}
+import validator.jsonValidator.syntax.objectRule.ObjectBoolTree.BoolOperator.eval
+import validator.jsonValidator.syntax.objectRule.ObjectNumericTree._
 
 object ObjectBoolTree {
 
@@ -28,7 +29,7 @@ object ObjectBoolTree {
   case object Eq extends Comparator { override def toString: String = "==" }
   case object NEq extends Comparator { override def toString: String = "!=" }
 
-  object Comparator {
+  private object Comparator {
     def compare[T: Numeric]( l: T, r: T, op: Comparator): Boolean  = {
       val num0 = implicitly[Numeric[T]]
 
@@ -40,14 +41,15 @@ object ObjectBoolTree {
         case Eq  => num0.equiv(l, r)
         case NEq => !num0.equiv(l, r)
       }
-      println( s"$l $op $r :: $ret")
+
+      wordy( s"$l $op $r :: $ret")
 
       ret
     }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
-  type BoolOp = (BoolOperator, BoolExpr)
+  private type BoolOp = (BoolOperator, BoolExpr)
 
   sealed trait BoolExpr {
     def evaluateWith[T:Numeric](f: String => Either[String, T]): Either[EvaluationError, Boolean]
@@ -82,7 +84,7 @@ object ObjectBoolTree {
 
   case class BoolOps(base: BoolExpr, ops: List[BoolOp]) extends BoolExpr {
 
-    val early = ops.to(LazyList)
+    private val early = ops.to(LazyList)
 
     override def toString: String =
       if (ops.nonEmpty) ops.map { case (op, exp) => s" $op $exp" }.mkString(s"( $base", " ", " )")
@@ -114,38 +116,38 @@ object ObjectBoolTree {
 
 }
 
-object SpecSOBAdt extends App {
-
-  import ObjectRuleParser._
-
-  val s =
-   // "${path\\}:11} > 0"
-  "${path:11} < ${path_2} || 0 < ( ${path:1} / ${path_2} * ( ${path_3} + ${path_4} )) / ${path_5}  + ${path_6} * 12 - ${path_11} + ${path_12} * ${path_13__4:5} + ${path_14} / ${path:15} + ${path:16} "
-
-  val m = Map(
-    "path_0"	    -> 1,
-    "path_2"      -> 2,
-    "path_3"      -> 3,
-    "path_4"      -> 4,
-    "path_5"      -> 6,
-    "path_6"      -> 6,
-    "path_11"     -> 11,
-    "path_12"     -> 12,
-    "path_13"     -> 13,
-    "path_14"     -> 14,
-    "path_15"     -> 15,
-    "path_16"     -> 16,
-  )
-
-  val f: String => Either[String, Double] = (s: String) => m.get(s).map(_.toDouble).toRight( s"not-found: $s")
-
-  val expr: Either[String, ObjectBoolTree.BoolOps] = parse(s)
-  println(expr)
-
-  expr.foreach(println)
-
-  expr.foreach( _.checkSyntaxWith(f).foreach(println))
-
-  val z = expr.map( _.evaluateWith(f))
-  println(z)
-}
+//object SpecObjectBoolTree extends App {
+//
+//  import ObjectRuleParser._
+//
+//  val s =
+//   // "${path\\}:11} > 0"
+//  "${path:11} < ${path_2} || 0 < ( ${path:1} / ${path_2} * ( ${path_3} + ${path_4} )) / ${path_5}  + ${path_6} * 12 - ${path_11} + ${path_12} * ${path_13__4:5} + ${path_14} / ${path:15} + ${path:16} "
+//
+//  val m = Map(
+//    "path_0"	    -> 1,
+//    "path_2"      -> 2,
+//    "path_3"      -> 3,
+//    "path_4"      -> 4,
+//    "path_5"      -> 6,
+//    "path_6"      -> 6,
+//    "path_11"     -> 11,
+//    "path_12"     -> 12,
+//    "path_13"     -> 13,
+//    "path_14"     -> 14,
+//    "path_15"     -> 15,
+//    "path_16"     -> 16,
+//  )
+//
+//  val f: String => Either[String, Double] = (s: String) => m.get(s).map(_.toDouble).toRight( s"not-found: $s")
+//
+//  val expr: Either[String, ObjectBoolTree.BoolOps] = parse(s)
+//  show(expr)
+//
+//  expr.foreach(show)
+//
+//  expr.foreach( _.checkSyntaxWith(f).foreach(show))
+//
+//  val z = expr.map( _.evaluateWith(f))
+//  show(z)
+//}

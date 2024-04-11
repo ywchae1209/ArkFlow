@@ -1,4 +1,4 @@
-package validator.validate.syntax.objectRule
+package validator.jsonValidator.syntax.objectRule
 
 import validator.utils.StringUtil.parseWith
 

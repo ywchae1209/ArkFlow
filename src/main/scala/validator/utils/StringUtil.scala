@@ -15,9 +15,8 @@ object StringUtil {
 
   ////////////////////////////////////////////////////////////////////////////////
 
-  def lift[T](o: T): Option[T] = if (o == null) None else Some(o)
   def lift(s: String): Option[String] = if (s == null || s.isEmpty) None else Some(s)
-  def decodeUrl(s: String) = lift(s).map( java.net.URLDecoder.decode(_, StandardCharsets.UTF_8))
+  def decodeUrl(s: String): Option[String] = lift(s).map( java.net.URLDecoder.decode(_, StandardCharsets.UTF_8))
 
   ////////////////////////////////////////////////////////////////////////////////
   // zip      todo :: for more readability
@@ -84,7 +83,7 @@ object StringUtil {
   ////////////////////////////////////////////////////////////////////////////////
   private val capture_key = "\\$\\{([a-zA-Z0-9.]+)}".r
 
-  val capture_arr = "\\$\\{([a-zA-Z0-9.]+)\\[([a-zA-Z0-9.]+)\\]}".r
+  val capture_arr: Regex = "\\$\\{([a-zA-Z0-9.]+)\\[([a-zA-Z0-9.]+)\\]}".r
 
   def interpolate(f: String => Option[String], keys: Regex = capture_key)
                  (str: String)
@@ -109,13 +108,14 @@ object StringUtil {
   // String Parse Util
   ////////////////////////////////////////////////////////////////////////////////
 
-  def toFailMessage(s: String, p: Int, extra: Parsed.Extra) = {
+  def toFailMessage(s: String, p: Int, extra: Parsed.Extra): String = {
 
     val msg = s"syntax error :: $s"
 
     val sp = List.fill(s.length)("-").mkString
     val p1 = List.fill(p)("").mkString("", " ", "^^^")
-    println(s"$msg\n$sp\n$s\n$sp\n$p1")
+
+    show(s"$msg\n$sp\n$s\n$sp\n$p1")
 
     msg
   }
@@ -127,7 +127,7 @@ object StringUtil {
         Left( toFailMessage( s, p, extra))
       case _ =>
         val msg = s"Invalid expression : $s"
-        println(msg)
+        show(msg)
         Left(msg)
     }
 
@@ -136,4 +136,8 @@ object StringUtil {
     t
   }
 
+  def wordy[T](t: T): T = {
+//    println("wordy: \t" + t)
+    t
+  }
 }

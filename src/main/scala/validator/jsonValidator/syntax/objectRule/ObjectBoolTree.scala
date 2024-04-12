@@ -84,8 +84,6 @@ object ObjectBoolTree {
 
   case class BoolOps(base: BoolExpr, ops: List[BoolOp]) extends BoolExpr {
 
-    private val early = ops.to(LazyList)
-
     override def toString: String =
       if (ops.nonEmpty) ops.map { case (op, exp) => s" $op $exp" }.mkString(s"( $base", " ", " )")
       else s"$base"
@@ -93,7 +91,7 @@ object ObjectBoolTree {
     override def evaluateWith[T: Numeric](f: String => Either[String, T])
     : Either[EvaluationError, Boolean] = {
 
-      early.foldLeft( base.evaluateWith(f) ){
+      ops.foldLeft( base.evaluateWith(f) ){
         case (err@Left(_), _) => err
         case (Right(b), (op, e)) =>
           e.evaluateWith(f)
@@ -116,38 +114,38 @@ object ObjectBoolTree {
 
 }
 
-//object SpecObjectBoolTree extends App {
-//
-//  import ObjectRuleParser._
-//
-//  val s =
-//   // "${path\\}:11} > 0"
-//  "${path:11} < ${path_2} || 0 < ( ${path:1} / ${path_2} * ( ${path_3} + ${path_4} )) / ${path_5}  + ${path_6} * 12 - ${path_11} + ${path_12} * ${path_13__4:5} + ${path_14} / ${path:15} + ${path:16} "
-//
-//  val m = Map(
-//    "path_0"	    -> 1,
-//    "path_2"      -> 2,
-//    "path_3"      -> 3,
-//    "path_4"      -> 4,
-//    "path_5"      -> 6,
-//    "path_6"      -> 6,
-//    "path_11"     -> 11,
-//    "path_12"     -> 12,
-//    "path_13"     -> 13,
-//    "path_14"     -> 14,
-//    "path_15"     -> 15,
-//    "path_16"     -> 16,
-//  )
-//
-//  val f: String => Either[String, Double] = (s: String) => m.get(s).map(_.toDouble).toRight( s"not-found: $s")
-//
-//  val expr: Either[String, ObjectBoolTree.BoolOps] = parse(s)
-//  show(expr)
-//
-//  expr.foreach(show)
-//
-//  expr.foreach( _.checkSyntaxWith(f).foreach(show))
-//
-//  val z = expr.map( _.evaluateWith(f))
-//  show(z)
-//}
+object SpecObjectBoolTree extends App {
+
+  import ObjectRuleParser._
+
+  val s =
+   // "${path\\}:11} > 0"
+  "${path:11} < ${path_2} || 0 < ( ${path:1} / ${path_2} * ( ${path_3} + ${path_4} )) / ${path_5}  + ${path_6} * 12 - ${path_11} + ${path_12} * ${path_13__4:5} + ${path_14} / ${path:15} + ${path:16} "
+
+  val m = Map(
+    "path_0"	    -> 1,
+    "path_2"      -> 2,
+    "path_3"      -> 3,
+    "path_4"      -> 4,
+    "path_5"      -> 6,
+    "path_6"      -> 6,
+    "path_11"     -> 11,
+    "path_12"     -> 12,
+    "path_13"     -> 13,
+    "path_14"     -> 14,
+    "path_15"     -> 15,
+    "path_16"     -> 16,
+  )
+
+  val f: String => Either[String, Double] = (s: String) => m.get(s).map(_.toDouble).toRight( s"not-found: $s")
+
+  val expr: Either[String, ObjectBoolTree.BoolOps] = parse(s)
+  show(expr)
+
+  expr.foreach(show)
+
+  expr.foreach( _.checkSyntaxWith(f).foreach(show))
+
+  val z = expr.map( _.evaluateWith(f))
+  show(z)
+}

@@ -11,10 +11,15 @@ case class SyntaxObject( syntaxBool: List[(BoolOps, String)]) {
   override def toString: String = syntaxBool.map(_._1.toString).mkString(",")
 
   def checkWith(jv: JValue, asFloat: Boolean = false): Either[EvalErrors, Boolean] = {
+
+    val routeSep = "\\."    // todo :: may need other sep.
     if( asFloat)
-      eval(s => (jv \ s).toDouble)
+      eval(s => {
+        jv.getJValue0(s.split(routeSep)).toDouble})    // String or Numeric to Double
     else
-      eval(s => (jv \ s).toLong)
+      eval(s => {
+        jv.getJValue0(s.split(routeSep)).toLong        // String or Numeric to Long
+      })
   }
 
   private def eval[T: Numeric](f: String => Either[String, T]) = {

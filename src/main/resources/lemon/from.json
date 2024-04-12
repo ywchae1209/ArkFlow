@@ -1,7 +1,7 @@
 [
   {
     "TRT_INFO": {
-      "TRT_KEY": ["1234-111aa-dasdsad"],
+      "TRT_KEY": "1234-111aa-dasdsad",
       "YYK_ID": "41359160",
       "PAT_ID": "1",
       "RCPT_GB": "외래",
@@ -41,7 +41,8 @@
       "ACCIDENT_CONTENT": "회의가 너무 많아 골이 깨짐",
       "INSURER": {
         "Code": "1.2.410.200071.1.1.1.1.2.14",
-        "Name": "교보생명"
+        "Name": "교보생명",
+        "amount" : "1234"
       }
     },
     "RCPT_HEADER": {

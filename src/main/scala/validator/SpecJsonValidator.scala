@@ -22,19 +22,19 @@ object SpecJsonValidator extends App {
 [
   {
     "TRT_INFO": { 														### 진료이력
-      "TRT_KEY": "(_isString && gt(10)) && lt(1000) || _oneOf(1234-456,abcdef, hig, this, is, good, day, 'this is good day')",											### "1234-111aa-dasdsad",
-      "YYK_ID": "_longerThan(10,11)",											### "41359160", // 요양기관 기호
+      "TRT_KEY": "_any",											### "1234-111aa-dasdsad",
+      "YYK_ID": "_longerThan(3)",											### "41359160", // 요양기관 기호
       "PAT_ID": "_digit",											### "1", // 환자번호
       "INSURE_TYPE": "_any( a, b)",									### "건강보험", // 보험유형명
       "INSURE_TYPE_CD": "_any",							### "P01", // 보험유형코드
-      "DEPT_CD": "_my",											### "D01", // 진료과목코드
+      "DEPT_CD": "_any",											### "D01", // 진료과목코드
       "DEPT_NM": "_any",											### "내과", // 진료과목명
       "DR_NM": "_any",												### "갑돌이", // 의사명
       "RCPT_GB": "_oneOf(입원,외래,응급,퇴원,중간)",											### "외래", // 영수증 유형 [입원,외래,응급,퇴원,중간]
-      "TRT_YMD": "_digit",											### "2022-07-18", // 진료일
-      "$$$$" : "${CUSTOM1} > ${CUSTOM1}",
+      "TRT_YMD": "_digitOr(-)",											### "2022-07-18", // 진료일
+      "$$$$" : "${CUSTOM1} == ${CUSTOM1}",
       "TRT_S_YMD": "_date(${yyyy}-${mm}-${dd}) || _digitOr(-)",										### "2022-07-18", // 진료시작일
-      "TRT_E_YMD": "_any && _between(0, 1000)",										### "2022-07-18", // 진료종료일
+      "TRT_E_YMD": "_any || _between(0, 1000)",										### "2022-07-18", // 진료종료일
       "DR_CD": "_any",												### "6", // 의사번호
       "TRT_AMT": "_any",											### "5000", // 환자부담 총맥
       "CUSTOM1": "_any",											### "20220718", // 진료영수증 조회를 위한 검색 조건
@@ -60,7 +60,8 @@ object SpecJsonValidator extends App {
       "BANK_NAME": "_any",										### "KEB하나은행", // 은행명
       "BANK_NUMBER": "_any",									### "1231412312", // 계좌번호
       "ACCIDENT_TYPE": "_any",								### "질병", // 사고유형 [질병, 상해, 사고]
-      "SOMEKEY": "_any",
+      "_?_:SOMEKEY": "_any",
+      "$$$$" : "${INSURER.amount} > = ${INSURANT_JUMIN}",
       "ACCIDENT_CONTENT": "_any",						### "회의가 너무 많아 골이 깨짐", // 사고내용
       "INSURER": { 													### 보험사 정보
         "Code": "_any",											### "1.2.410.200071.1.1.1.1.2.14",

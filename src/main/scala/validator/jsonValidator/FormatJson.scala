@@ -8,20 +8,77 @@ import validator.jsonValidator.FormatObject.{objectSyntaxKey, optionDefault}
 import validator.jsonValidator.syntax.{SyntaxObject, SyntaxValue}
 
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * {{{
+ * Json Validation Common Interface
+ *
+ * == Overview ==
+ *
+ * FormatJson has (almost) same structure of target-json.
+ *
+ * == Usage ==
+ *
+ * 1. create
+ *    val fj: FormatJson = FormatJson.apply( ruleString)
+ *
+ * 2. validate Json
+ *    val result: Either[Fails, JValue] = fj.evaluate(targetJson)
+ *
+ * == sub-classes ==
+ *
+ * [ Main sub-class ]
+ *  FormatObject  :: Inspect a Json Object.
+ *  FormatValue   :: Inspect a Json Value
+ *  FormatArray   :: Inspect a Json Array
+ *
+ * [ Supplementary sub-class]
+ *  FormatOptional :: helper for optional Json Field
+ *  }}}
+ *  [[FormatObject]] [[FormatValue]]  [[FormatArray]] [[FormatOptional]]
+ */
 sealed trait FormatJson extends ToJson {
+
   def toJson: JValue
+
+  /**
+   * {{{
+   * (recursively) EvaluateJson with correspond rule.
+   * note1) FormatJson has same (recursive-tree) structure with target Json.
+   * note2) FormatObject has extra rule ( SyntaxObject )
+   * }}}
+   * @param [[JValue]]
+   * @return [[Fails]]
+   */
   def evaluate(j: JValue): Either[Fails, JValue]
+
+  /**
+   * {{{
+   * used for Optional Json field.
+   * If not FormatJson, return KeyNotExist( kind of Fails)
+   * }}}
+   *
+   * [[KeyNotExist]] [[FormatJson]]
+   */
   def ifNotExist(key: String) : Either[Fails, JValue] = KeyNotExist(key)
 }
 
 object FormatJson {
 
-  def apply(s: String,
+
+  /**
+   *
+   * @param json :: Rule string written in Json.
+   * @param sepLine :: Line-separator of Json
+   * @param lineComment :: End-line comment marker. (default : ###)
+   * @return [[SyntaxError]] [[FormatJson]]
+   */
+  def apply(json: String,
             sepLine: String = "\n",
             lineComment: String = "###")
   : Either[SyntaxError, FormatJson] = {
 
-    val lines = s.split(sepLine).flatMap(_.split(lineComment).headOption)
+    val lines = json.split(sepLine).flatMap(_.split(lineComment).headOption)
 
     val jstr = lines.mkString(sepLine)
 
@@ -32,6 +89,13 @@ object FormatJson {
     jv.flatMap(toFormatJson)
   }
 
+  /** {{{
+   * Map rule(json node) to FormatJson
+   * This function is called at json-root-node, or json-array-node.
+   * }}}
+   * @param jv Validation rule-node. Children must be JObject or JArray.
+   * @return [[SyntaxError]] [[FormatJson]]
+   */
   def toFormatJson( jv: JValue) : Either[SyntaxError, FormatJson] = {
     jv match {
       case jo@JObject(_) => FormatObject(jo)
@@ -41,7 +105,10 @@ object FormatJson {
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+/**
+ * Json-value inspection rule holder .
+ * @param syntax : List of [[SyntaxValue]]. Target json must satisfy at least one of these syntax.
+ */
 case class FormatValue( syntax: List[SyntaxValue]= Nil ) extends FormatJson {
 
   override def toString: String = syntax.mkString("[$ ", ", ", " $]")
@@ -73,12 +140,26 @@ case class FormatValue( syntax: List[SyntaxValue]= Nil ) extends FormatJson {
 
 object FormatValue {
 
+  /**
+   * create FormatJson with given rule-string (internal function)
+   * @param expr
+   * @return
+   */
   def apply( expr: String): Either[SyntaxError, FormatValue] = {
     SyntaxValue(expr).map(s => FormatValue(List(s)))
   }
 
 }
 
+/**
+ * {{{
+ * Json-Array inspection rule holder .
+ * note1: FormatArray assume that each element of target json has same structure(FormatJson).
+ * note2: So, FormatArray must have exactly 1-element. (zero or above 1 elements are not allowed)
+ * }}}
+ * @param format FormatJson which each element must confirm.
+ * @param syntaxArray not used currently.
+ */
 ////////////////////////////////////////////////////////////////////////////////
 case class FormatArray(format: FormatJson,
                        syntaxArray: Option[SyntaxArray] = None ) extends FormatJson {
@@ -125,6 +206,12 @@ object FormatArray {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @param fields : JObject's Field-condition must confirm
+ * @param syntax : inter-field relationship for JObject must confirm.
+ *               see: [[SyntaxObject]]
+ */
 case class FormatObject(fields: Map[String, FormatJson],
                         syntax: Option[(SyntaxObject, Boolean)] = None) extends FormatJson {
 
@@ -237,17 +324,10 @@ object FormatObject {
         case (k, o) => Left(ExprError(s"not allowed in object : $o")).left.map( k -> _)
       }.partitionMap(identity)
 
-    if( lefts.nonEmpty) Left(SyntaxErrorObject(err0 ++ lefts))
+    if( lefts.nonEmpty || err0.nonEmpty) Left(SyntaxErrorObject(err0 ++ lefts))
     else
       Right(new FormatObject(rights.toMap, syntax.headOption.map(_ -> false)))
   }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-case class FormatPred(syntax: JValue => Either[Fails, JValue]) extends FormatJson {
-  override def evaluate(j: JValue): Either[Fails, JValue] = syntax(j)
-
-  override def toJson: JValue = JString(this.toString)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

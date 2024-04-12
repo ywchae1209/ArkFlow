@@ -53,7 +53,7 @@ case class JsonValidator( rules: Map[String, FormatJson],
 }
 
 /**
- * wrapper for Java Campatability
+ * wrapper for Java Compatibility
  */
 case class ValidateResult( private val ret: Either[String, Either[Fails, JValue]] ) {
 

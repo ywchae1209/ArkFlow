@@ -1,10 +1,10 @@
-package validator.jsonValidator.syntax
+package validator.jsonValidator.syntaxObject
 
 import org.json4s.JValue
+import validator.jsonValidator.syntaxObject.rule.ObjectBoolTree.BoolOps
+import validator.jsonValidator.syntaxObject.rule.ObjectRuleParser
+import validator.jsonValidator.{EvalErrors, InvalidSyntaxObjectRules, SyntaxError}
 import validator.utils.JsonUtil.JValueWithPower
-import validator.jsonValidator.{EvalErrors, ExprError, ExprErrors}
-import validator.jsonValidator.syntax.objectRule.ObjectBoolTree.BoolOps
-import validator.jsonValidator.syntax.objectRule.ObjectRuleParser
 
 case class SyntaxObject( syntaxBool: List[(BoolOps, String)]) {
 
@@ -12,7 +12,7 @@ case class SyntaxObject( syntaxBool: List[(BoolOps, String)]) {
 
   def checkWith(jv: JValue, asFloat: Boolean = false): Either[EvalErrors, Boolean] = {
 
-    val routeSep = "\\."    // todo :: may need other sep.
+    val routeSep = "\\."    // todo :: may need escape.
     if( asFloat)
       eval(s => {
         jv.getJValue0(s.split(routeSep)).toDouble})    // String or Numeric to Double
@@ -35,18 +35,16 @@ case class SyntaxObject( syntaxBool: List[(BoolOps, String)]) {
 }
 
 object SyntaxObject{
-  def apply( expr: String*): Either[ExprErrors, SyntaxObject] = {
+  def apply( expr: String*): Either[SyntaxError, SyntaxObject] = {
 
     val (lefts, rights) =
-      expr.map( e =>
-        ObjectRuleParser.parse(e).fold(
-          s => Left(ExprError(s"$e -> $s")),
-          o => Right(o -> e) )
-      ).partitionMap(identity)
-
+      expr
+        .map( e =>
+          ObjectRuleParser.parse(e).map( _ -> e) )
+        .partitionMap(identity)
 
     if(lefts.nonEmpty)
-      Left(ExprErrors(lefts.toList))
+      Left( InvalidSyntaxObjectRules( lefts.toList) )
     else
       Right(SyntaxObject( rights.toList))
   }

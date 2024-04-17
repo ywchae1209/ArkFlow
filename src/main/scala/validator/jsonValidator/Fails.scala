@@ -6,43 +6,12 @@ import org.json4s.{DefaultFormats, JArray, JString, JValue}
 import validator.utils.StringUtil
 
 trait ToJson{
+
   def toJson: JValue
 
   def show(header: String= ""): String =  {
     implicit val formats: DefaultFormats.type = DefaultFormats
     StringUtil.show(header + "\n" + writePretty(toJson))
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// SyntaxError : check syntax for field Value
-////////////////////////////////////////////////////////////////////////////////
-
-sealed trait SyntaxError extends ToJson
-
-case class SyntaxErrorObject( err: List[(String, SyntaxError)]) extends SyntaxError {
-  override def toJson: JValue = JObject( err.map(kv => kv._1 -> kv._2.toJson))
-}
-
-case class SyntaxErrorArray( err: List[SyntaxError]) extends SyntaxError {
-  override def toJson: JValue = JArray( err.map( _.toJson))
-}
-
-case class ExprErrors(e: List[SyntaxError]) extends SyntaxError {
-  override def toJson: JValue = JArray( e.map(_.toJson))
-}
-
-case class ExprError(e: String) extends SyntaxError {
-  override def toJson: JValue = JString(e)
-}
-
-
-object ExprErrors{
-  def apply[T](se: SyntaxError*): Either[ExprErrors, T] = Left( new ExprErrors(se.toList))
-}
-object ExprError {
-  implicit class StringWithExprErrorPower(s: String) {
-    def exprError[T]: Left[ExprError, Nothing] = Left(new ExprError(s))
   }
 }
 
@@ -61,7 +30,6 @@ case class EvalError(e: String) extends EvaluationError {
 case class EvalSyntaxErr(syntaxError: SyntaxError ) extends EvaluationError {
   override def toJson: JValue = syntaxError.toJson    // todo :: check
 }
-
 
 object EvalSyntaxErr {
   def apply[T](syntaxError: SyntaxError)

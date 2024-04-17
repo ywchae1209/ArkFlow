@@ -137,7 +137,7 @@ object StringUtil {
   }
 
   def wordy[T](t: T): T = {
-//    println("wordy: \t" + t)
+    println("wordy: \t" + t)
     t
   }
 }

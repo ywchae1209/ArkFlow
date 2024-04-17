@@ -1,11 +1,11 @@
 package validator.jsonValidator
 
 import org.json4s.{JArray, JField, JNull, JObject, JString, JValue}
+import validator.jsonValidator.FormatObject.{objectSyntaxKey, optionDefault}
+import validator.jsonValidator.syntaxObject.SyntaxObject
+import validator.jsonValidator.syntaxValue.SyntaxValue
 import validator.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
 import validator.utils.StringUtil.{show, wordy}
-import validator.jsonValidator.ExprError.StringWithExprErrorPower
-import validator.jsonValidator.FormatObject.{objectSyntaxKey, optionDefault}
-import validator.jsonValidator.syntax.{SyntaxObject, SyntaxValue}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -39,8 +39,6 @@ import validator.jsonValidator.syntax.{SyntaxObject, SyntaxValue}
  */
 sealed trait FormatJson extends ToJson {
 
-  def toJson: JValue
-
   /**
    * {{{
    * (recursively) EvaluateJson with correspond rule.
@@ -65,7 +63,6 @@ sealed trait FormatJson extends ToJson {
 
 object FormatJson {
 
-
   /**
    *
    * @param json :: Rule string written in Json.
@@ -84,7 +81,7 @@ object FormatJson {
 
     wordy( "===== un-commented rule =====\n" + jstr + "\n=============================\n" )
 
-    val jv = jstr.toJValueOr.left.map( ExprError(_))
+    val jv = jstr.toJValueOr.left.map( InvalidRuleJsonError(_) )
 
     jv.flatMap(toFormatJson)
   }
@@ -98,9 +95,10 @@ object FormatJson {
    */
   def toFormatJson( jv: JValue) : Either[SyntaxError, FormatJson] = {
     jv match {
+
       case jo@JObject(_) => FormatObject(jo)
       case ja@JArray(_) => FormatArray(ja)
-      case other => Left( ExprError(s"not allowed format :: $other"))
+      case other => Left( InvalidRuleNodeError( s"not Object/Array: $other"))
     }
   }
 }
@@ -192,13 +190,14 @@ object FormatArray {
     val arr = jv.children
 
     if(arr.length != 1) {
-      s"syntax error :: array must have a single-element :: 1 != ${arr.length}".exprError
+      Left(InvalidRuleNodeError( s"Array must have a single-element :: 1 != ${arr.length}"))
+
     } else {
 
       val h = arr.head
 
       FormatJson.toFormatJson(h)
-        .left.map( e => SyntaxErrorArray(List(e)))
+        .left.map( e => SyntaxErrorArrayNode(List(e)))
         .map( f => FormatArray(f, None))
     }
   }
@@ -285,8 +284,7 @@ case class FormatObject(fields: Map[String, FormatJson],
 
 object FormatObject {
 
-  val empty: JObject = JObject()
-
+  /// todo ::::
   val objectSyntaxKey = "$$$$"
 
   private val optionPrefix = "_?_:"
@@ -300,6 +298,11 @@ object FormatObject {
       k.drop(optionPrefixLen) -> FormatOptional(f)
     else
       k -> f
+  }
+
+  // todo :::
+  def makeSyntaxObjectRule(jv: JValue) = {
+
   }
 
   def apply(jv: JObject): Either[SyntaxError, FormatObject] = {
@@ -321,10 +324,10 @@ object FormatObject {
         case (k, JString(exp)) => FormatValue(exp).map( f => mayOptionalField(k, f)).left.map( k -> _)
         case (k, jo@JObject(_)) => FormatObject(jo).map( f => mayOptionalField(k, f)).left.map( k -> _)
         case (k, ja@JArray(_)) => FormatArray(ja).map(  f => mayOptionalField(k, f)).left.map( k -> _)
-        case (k, o) => Left(ExprError(s"not allowed in object : $o")).left.map( k -> _)
+        case (k, o) => Left( InvalidRuleNodeError(s"not String/Object/Array:: $o")).left.map( k -> _)
       }.partitionMap(identity)
 
-    if( lefts.nonEmpty || err0.nonEmpty) Left(SyntaxErrorObject(err0 ++ lefts))
+    if( lefts.nonEmpty || err0.nonEmpty) Left( SyntaxErrorObjectNode(err0 ++ lefts))
     else
       Right(new FormatObject(rights.toMap, syntax.headOption.map(_ -> false)))
   }
@@ -332,14 +335,16 @@ object FormatObject {
 
 ////////////////////////////////////////////////////////////////////////////////
 case class FormatOptional( format: FormatJson) extends FormatJson {
+
   override def evaluate(j: JValue): Either[Fails, JValue] = {
     format.evaluate(j).orElse(Right(j))
   }
 
   override def ifNotExist(key: String): Either[Fails, JValue] = {
     wordy( s"INFO [ Optional ] key-not-exist-but-ok( $key )")
-    Right(optionDefault)
+    Right( optionDefault)
   }
+
   override def toJson: JValue = JObject( "Optional" -> format.toJson )
 }
 

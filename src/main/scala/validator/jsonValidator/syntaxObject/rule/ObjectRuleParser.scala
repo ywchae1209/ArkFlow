@@ -1,25 +1,22 @@
-package validator.jsonValidator.syntax.objectRule
-
-import validator.utils.StringUtil.parseWith
+package validator.jsonValidator.syntaxObject.rule
 
 import fastparse.NoWhitespace._
 import fastparse._
-
-import ObjectNumericTree._
-import ObjectBoolTree._
+import validator.jsonValidator.InvalidSyntaxObjectRule
+import validator.jsonValidator.syntaxObject.rule.ObjectBoolTree._
+import validator.utils.StringUtil.parseWith
 
 object ObjectRuleParser {
 
-  def parse(s: String): Either[String, BoolOps] = parseWith(numericBoolExpression(_))(s)
-
-  def parseNumeric(s: String): Either[String, NumericOps] = parseWith(numericExpression(_))(s)
+  def parse(s: String): Either[InvalidSyntaxObjectRule, BoolOps] =
+    parseWith(numericBoolExpression(_))(s).left.map( InvalidSyntaxObjectRule)
 
   ////////////////////////////////////////////////////////////////////////////////
   // NumExpr Parser
   ////////////////////////////////////////////////////////////////////////////////
 
-  private def numericExpression[$: P]: P[NumericOps] = P(append ~ sp ~ End)
   private def numericBoolExpression[$: P]: P[BoolOps] = P(or ~ sp ~ End)
+  private def numericExpression[$: P]: P[NumericOps] = P(append ~ sp ~ End)
 
   private def sp[$: P] = P(CharsWhileIn(" \r\n\t").rep(max = 80))
   private def `(`[$: P] = P(sp ~ "(" ~ sp)
@@ -59,16 +56,16 @@ object ObjectRuleParser {
   // Boolean & Compare Rule Parser
   ////////////////////////////////////////////////////////////////////////////////
 
-  private def cmp[$: P]: P[BoolExpr] = P(append ~ StringIn("<", "<=", ">", ">=", "==", "!=").! ~ append).map {
-    case (lhs, "<", rhs) => NumComp(lhs, rhs, Lt)
-    case (lhs, "<=", rhs) => NumComp(lhs, rhs, Lte)
-    case (lhs, ">", rhs) => NumComp(lhs, rhs, Gt)
-    case (lhs, ">=", rhs) => NumComp(lhs, rhs, Gte)
-    case (lhs, "==", rhs) => NumComp(lhs, rhs, Eq)
-    case (lhs, "!=", rhs) => NumComp(lhs, rhs, NEq)
+  private def cmp[$: P]: P[BoolExpression] = P(append ~ StringIn("<", "<=", ">", ">=", "==", "!=").! ~ append).map {
+    case (lhs, "<", rhs) => NumericCompare(lhs, rhs, Lt)
+    case (lhs, "<=", rhs) => NumericCompare(lhs, rhs, Lte)
+    case (lhs, ">", rhs) => NumericCompare(lhs, rhs, Gt)
+    case (lhs, ">=", rhs) => NumericCompare(lhs, rhs, Gte)
+    case (lhs, "==", rhs) => NumericCompare(lhs, rhs, Eq)
+    case (lhs, "!=", rhs) => NumericCompare(lhs, rhs, NEq)
   }
 
-  private def factorBool[$: P]: P[BoolExpr] = P(paransBool | cmp)
+  private def factorBool[$: P]: P[BoolExpression] = P(paransBool | cmp)
 
   private def paransBool[$: P]: P[BoolOps] = P(`(` ~/ or ~ `)`)
 
@@ -76,7 +73,7 @@ object ObjectRuleParser {
 
   private def or[$: P]: P[BoolOps] = P(and ~ sp ~ ("||".! ~ and).rep).map(s => toBoolOps(s))
 
-  private def toBoolOps(tree: (BoolExpr, Seq[(String, BoolExpr)])): BoolOps = {
+  private def toBoolOps(tree: (BoolExpression, Seq[(String, BoolExpression)])): BoolOps = {
 
     val (base, ops) = tree
     val op = ops.map {

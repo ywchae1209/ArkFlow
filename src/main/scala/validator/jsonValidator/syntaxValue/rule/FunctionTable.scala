@@ -1,24 +1,24 @@
-package validator.jsonValidator.syntax.valueRule
+package validator.jsonValidator.syntaxValue.rule
 
 import org.json4s.{JDecimal, JDouble, JInt, JLong, JValue}
+import validator.jsonValidator.EvalError.StringWithSyntaxPower
+import validator.jsonValidator.syntaxValue.rule.Predicate.JPredicate
+import validator.jsonValidator._
 import validator.utils.JsonUtil._
 import validator.utils.StringUtil
 import validator.utils.StringUtil.{show, wordy}
-import validator.jsonValidator.EvalError.StringWithSyntaxPower
-import validator.jsonValidator.ExprError.StringWithExprErrorPower
-import validator.jsonValidator.syntax.valueRule.Predicate.JPredicate
-import validator.jsonValidator.{EvalError, EvalSyntaxErr, EvaluationError, ExprError, SyntaxError}
 
 import scala.collection.immutable.{HashMap, HashSet}
 import scala.math.BigDecimal.long2bigDecimal
 import scala.math.Numeric.Implicits.infixNumericOps
 
 
-case class Predicate (check: Either[SyntaxError, JPredicate ],
+case class Predicate (check: Either[SyntaxErrorValue, JPredicate ],
                       name: String,
                       args: List[String] ) {
 
-  def getSyntaxError: Option[SyntaxError] = check.fold( Option(_), _ => None)
+  def getSyntaxError: Option[SyntaxErrorValue] = check.fold( Option(_), _ => None)
+
   private lazy val mayError = check.fold( EvalSyntaxErr[JPredicate], Right(_) )
 
   def apply(jv: JValue) : Either[EvaluationError, Boolean] = {
@@ -27,8 +27,7 @@ case class Predicate (check: Either[SyntaxError, JPredicate ],
       val ret = f(jv)
 
       ret.left.foreach{ s =>
-        val msg = s"$s : i'll judge as false"
-        wordy( args.mkString( s"Predicate :: $name(", ", ", s") == $msg"))
+        wordy( args.mkString( s"Predicate :: $name(", ", ", s") == $s : i'll judge as false"))
       }
 
       ret.fold( _ => Right(false), r => Right(r))
@@ -41,11 +40,11 @@ object Predicate {
 }
 
 case class PredicateMaker( name: String,
-                           make: Seq[String] => Either[SyntaxError, JPredicate]) {
+                           make: Seq[String] => Either[SyntaxErrorValue, JPredicate]) {
   override def toString: String = s"PredicateMaker($name)"
 
   def apply(s: Seq[String])
-  : Either[SyntaxError, JPredicate] = make(s)
+  : Either[SyntaxErrorValue, JPredicate] = make(s)
 }
 
 case class FunctionTable(functionTable: Map[String, PredicateMaker]) {
@@ -54,7 +53,7 @@ case class FunctionTable(functionTable: Map[String, PredicateMaker]) {
     val check =
       functionTable.get(name)
         .map(_(args))
-        .getOrElse( Left(new ExprError(s"syntax error :: undefined-function :: $name")) )   //todo
+        .getOrElse( Left( UnknownFunction(name, args)) )
 
     Predicate(check, name, args.toList)
   }
@@ -88,34 +87,34 @@ object PredicateMaker {
   private def toStringOr(s: String) = Right(s)
 
   private def ofLen(name: String, l: Seq[String], n: Int)
-  : Either[SyntaxError, Seq[String]] =
-    if( l.length == n) Right(l)
-    else s"syntax error :: $name :: arg-count must $n".exprError
+  : Either[SyntaxErrorValue, Seq[String]] =
+    if( l.length == n) Right(l) else Left(ArgumentCountError(name, l, n))
 
   private def ofType0[T](name: String,
-                        conv: String => Either[SyntaxError, T])
-                       (toPred: Seq[T] => JPredicate)
+                         conv: String => Either[String, T])
+                        (toPred: Seq[T] => JPredicate)
   = PredicateMaker( name, args => {
         val (lefts, rights) = args.map(conv).partitionMap(identity)
-        if (lefts.nonEmpty) lefts.mkString(",").exprError
+        if (lefts.nonEmpty) Left(ArgumentTypeError(name, args, lefts.head))
         else Right(rights)
       }.map(toPred) )
 
 
   private def ofType[T](name: String,
                         len: Int,
-                        conv: String => Either[SyntaxError, T])
+                        conv: String => Either[String, T])
                        (toPred: Seq[T] => JPredicate)
-  = PredicateMaker( name, args => ofLen(name, args, len)
+  = PredicateMaker( name, args =>
+    ofLen(name, args, len)
       .flatMap { l =>
         val (lefts, rights) = l.take(len).map(conv).partitionMap(identity)
-        if (lefts.nonEmpty) lefts.mkString(s"$name : (", ",", ")").exprError
+        if (lefts.nonEmpty) Left(ArgumentTypeError(name, args, lefts.head))
         else Right(rights)
       }
       .map(toPred) )
 
-  private def toLongOr(s: String) = s.toLongOption.toRight(ExprError(s"$s is not long"))
-  private def toDoubleOr(s: String) = s.toDoubleOption.toRight(ExprError(s"$s is not double"))
+  private def toLongOr(s: String) = s.toLongOption.toRight((s"$s is not long"))
+  private def toDoubleOr(s: String) = s.toDoubleOption.toRight((s"$s is not double"))
 
   private def ofLong0(n: String)( f: Seq[Long] => JPredicate) = ofType0[Long](n, toLongOr)(f)
   private def ofDouble0(n: String)( f: Seq[Double] => JPredicate) = ofType0[Double](n, toDoubleOr)(f)
@@ -141,12 +140,17 @@ object PredicateMaker {
   private val between0    = ofDouble("between0", 2)(args => Calc.between(args.head, args(1))(_) )
 
   ////////////////////////////////////////////////////////////////////////////////
+
   private val _isString   = ofString0("_isString")(_ => Calc._isString)
 
   private val _oneOf      = ofString0("_oneOf")(args => Calc._oneOf(args)(_))
   private val _digit      = ofString0("_digit")(args => Calc._digitOr(Nil))
   private val _digitOr    = ofString0("_digitOr")(args => Calc._digitOr(args))
   private val _charsIn    = ofString0("_charsIn")(args => Calc._charsIn(args))
+
+  private val _notOneOf    = ofString0("_notOneOf")(args => Calc._notOneOf(args))      // todo
+  private val _charsNotIn  = ofString0("_charsNotIn")(args => Calc._charsNotIn(args))  // todo
+
   private val _regex      = ofString0("_regex")(args => Calc._regex(args))
   private val _date       = ofString0("_date")(args => Calc._date(args))
 
@@ -174,11 +178,9 @@ object PredicateMaker {
     gt0, lt0, gte0, lte0, between0,
     _lt, _gt, _lte, _gte, _between,
     _lt0, _gt0, _lte0, _gte0, _between0,
-    _isString, _oneOf, _digit, _digitOr, _charsIn, _regex,
+    _isString, _oneOf, _notOneOf, _digit, _digitOr, _charsIn, _charsNotIn,  _regex,
     _date, _length, _longerThan, _shorterThan,
   )
-
-  UserFunctionTable.wordy
 
 }
 
@@ -197,14 +199,23 @@ object Calc {
     getString(jv).map( s => args.contains(s))
   }
 
+  def _notOneOf(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
+    getString(jv).map( s => !args.contains(s))
+  }
+
   def _digitOr(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     val set = HashSet.apply( args.mkString.toList.distinct: _*)
     getString(jv).map( s => s.forall(c => c.isDigit || set.contains(c)) )
   }
 
+  def _charsNotIn(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
+    val set = HashSet.apply( args.mkString.toList.distinct: _*)
+    getString(jv).map( s => s.forall(c => !set.contains(c)) )
+  }
+
   def _charsIn(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     val set = HashSet.apply( args.mkString.toList.distinct: _*)
-    getString(jv).map( s => s.forall(c => c.isDigit || set.contains(c)) )
+    getString(jv).map( s => s.forall(c => set.contains(c)) )        // bug-fix
   }
 
   def _regex(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {

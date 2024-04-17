@@ -1,5 +1,8 @@
 package validator
 
+import org.json4s.JValue
+import validator.jsonValidator.Fails
+
 import scala.io.Source.fromResource
 
 object SpecJsonValidator extends App {
@@ -61,7 +64,7 @@ object SpecJsonValidator extends App {
       "BANK_NUMBER": "_any",									### "1231412312", // 계좌번호
       "ACCIDENT_TYPE": "_any",								### "질병", // 사고유형 [질병, 상해, 사고]
       "_?_:SOMEKEY": "_any",
-      "$$$$" : "${INSURER.amount} > = ${INSURANT_JUMIN}",
+      "$$$$" : "${INSURER.amount} <= ${INSURANT_JUMIN}",
       "ACCIDENT_CONTENT": "_any",						### "회의가 너무 많아 골이 깨짐", // 사고내용
       "INSURER": { 													### 보험사 정보
         "Code": "_any",											### "1.2.410.200071.1.1.1.1.2.14",
@@ -131,7 +134,7 @@ object SpecJsonValidator extends App {
     ],
     "PRS_INFO": [ 														### 원외처방전
       {
-        "RX_ID": "_any",											### "2022071800001", // 교부번호
+        "RX_ID": "_digit && _longerThan(10)",											### "2022071800001", // 교부번호
         "INSURE_TYPE_CD": "_any",						### "P01", // 보험유형코드
         "INSURE_TYPE_NM": "_any",						### "건강보험", // 보험유형명
         "PAT_ID": "_any",										### "1", // 환자번호
@@ -163,15 +166,18 @@ object SpecJsonValidator extends App {
   val path = "lemon\\from.json"
   val jstr = fromResource(path).mkString
 
-  val id = "hiwebnet"
-  val jv: JsonValidator = JsonValidator(id, ruleString)
-  val result = jv.evaluate(id, jstr )
+  ////////////////////////////////////////////////////////////////////////////////
 
+  val id = "hiwebnet"
+
+  // initialize JsonValidate with id, rule
+  val jv: JsonValidator = JsonValidator(id, ruleString)
+
+  // evaluate Json with id's rule
+  val result: ValidateResult = jv.evaluate(id, jstr )
+
+  // show result
   result.show()
-//  println( s"isFail        : ${result.isFail()}")
-//  println( s"isSuccess     : ${result.isSuccess()}")
-//  println( s"getFailReason -----------------:\n ${result.getFailReason()}")
-//  println( s"getSuccess    -----------------:\n ${result.getSuccess()}")
 
 }
 

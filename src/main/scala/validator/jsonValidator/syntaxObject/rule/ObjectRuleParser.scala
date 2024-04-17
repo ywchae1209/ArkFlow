@@ -3,7 +3,7 @@ package validator.jsonValidator.syntaxObject.rule
 import fastparse.NoWhitespace._
 import fastparse._
 import validator.jsonValidator.InvalidSyntaxObjectRule
-import validator.jsonValidator.syntaxObject.rule.ObjectBoolTree._
+import validator.jsonValidator.syntaxObject.rule.ObjectRuleAST._
 import validator.utils.StringUtil.parseWith
 
 object ObjectRuleParser {

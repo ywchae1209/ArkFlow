@@ -1,7 +1,7 @@
 package validator.jsonValidator.syntaxObject
 
 import org.json4s.JValue
-import validator.jsonValidator.syntaxObject.rule.ObjectBoolTree.BoolOps
+import validator.jsonValidator.syntaxObject.rule.ObjectRuleAST.BoolOps
 import validator.jsonValidator.syntaxObject.rule.ObjectRuleParser
 import validator.jsonValidator.{EvalErrors, InvalidSyntaxObjectRules, SyntaxError}
 import validator.utils.JsonUtil.JValueWithPower

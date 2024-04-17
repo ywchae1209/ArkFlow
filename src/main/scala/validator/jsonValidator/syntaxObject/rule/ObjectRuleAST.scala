@@ -1,12 +1,12 @@
 package validator.jsonValidator.syntaxObject.rule
 
-import validator.jsonValidator.syntaxObject.rule.ObjectBoolTree.BoolOperator.eval
-import validator.jsonValidator.syntaxObject.rule.ObjectBoolTree.NumericOperator.{cal0, fromInt}
+import validator.jsonValidator.syntaxObject.rule.ObjectRuleAST.BoolOperator.eval
+import validator.jsonValidator.syntaxObject.rule.ObjectRuleAST.NumericOperator.{cal0, fromInt}
 import validator.jsonValidator._
 import validator.utils.May.{mayOr, maybe}
 import validator.utils.StringUtil.{show, wordy}
 
-object ObjectBoolTree {
+object ObjectRuleAST {
 
   ////////////////////////////////////////////////////////////////////////////////
   // Bool & Compare Expression ADT
@@ -51,10 +51,12 @@ object ObjectBoolTree {
   ////////////////////////////////////////////////////////////////////////////////
   private type BoolOp = (BoolOperator, BoolExpression)
 
-  sealed trait BoolExpression {
-    def evaluateWith[T:Numeric](f: String => Either[String, T]): Either[EvaluationError, Boolean]
-    def checkSyntax[T:Numeric](): Option[SyntaxErrorObject]
+  trait showExpression {
+    def expressionWith[T](f: String => Either[String, T]): String
+  }
 
+  sealed trait BoolExpression extends showExpression {
+    def evaluateWith[T:Numeric](f: String => Either[String, T]): Either[EvaluationError, Boolean]
   }
 
   case class NumericCompare(lhs: NumericExpression, rhs: NumericExpression, op: Comparator) extends BoolExpression {
@@ -74,18 +76,9 @@ object ObjectBoolTree {
       }
     }
 
-    override def checkSyntax[T: Numeric](): Option[SyntaxErrorObject] = {
+    override def expressionWith[T](f: String => Either[String, T]): String =
+      s"( ${lhs.expressionWith(f)} $op ${rhs.expressionWith(f)}"
 
-      val e0 = lhs.checkSyntax().toList
-      val e1 = rhs.checkSyntax().toList
-      val err = e0 ++ e1
-
-      err.length match {
-        case 0 => None
-        case 1 => Some(err.head)
-        case _ => Some( SyntaxErrorObjects(err, toString) )
-      }
-    }
   }
 
   case class BoolOps(base: BoolExpression, ops: List[BoolOp]) extends BoolExpression {
@@ -107,19 +100,11 @@ object ObjectBoolTree {
       }
     }
 
-    override def checkSyntax[T: Numeric]()
-    : Option[SyntaxErrorObject] = {
-
-      val e0 = base.checkSyntax().toList
-      val es = ops.flatMap( _._2.checkSyntax())
-      val err = e0 ++ es
-
-      err.length match {
-        case 0 => None
-        case 1 => Some(err.head)
-        case _ => Some( SyntaxErrorObjects(err, toString))
-      }
-    }
+    override def expressionWith[T](f: String => Either[String, T]): String =
+    if (ops.nonEmpty)
+      ops.map { case (op, exp) => s" $op ${exp.expressionWith(f)}" }
+        .mkString(s"( ${base.expressionWith(f)}", " ", " )")
+    else s"${base.expressionWith(f)}"
   }
 
 
@@ -164,9 +149,8 @@ object ObjectBoolTree {
   private type NumOp = (NumericOperator, NumericExpression)
 
   ////////////////////////////////////////////////////////////////////////////////
-  sealed trait NumericExpression {
+  sealed trait NumericExpression extends showExpression {
     def calculateWith[T:Numeric](f: String => Either[String, T]): Either[EvaluationError, T]
-    def checkSyntax[T:Numeric](): Option[SyntaxErrorObject] = None
   }
 
   case class Number(value: Int) extends NumericExpression {
@@ -174,6 +158,7 @@ object ObjectBoolTree {
     override def calculateWith[T: Numeric](f: String => Either[String, T])
     : Either[EvaluationError, T] = Right( fromInt( value) )
 
+    override def expressionWith[T](f: String => Either[String, T]): String = value.toString
   }
 
   case class Term(path: String, default: Option[Int] = None) extends NumericExpression {
@@ -197,6 +182,10 @@ object ObjectBoolTree {
 
       ret
     }
+
+    override def expressionWith[T](f: String => Either[String, T])
+    : String = f(path).fold( _ => s"_:$str0", t => s"$t")
+
   }
 
   object Term {
@@ -238,19 +227,11 @@ object ObjectBoolTree {
       }
     }
 
-    override def checkSyntax[T: Numeric]()
-    : Option[SyntaxErrorObject] = {
-
-      val e0 = base.checkSyntax().toList
-      val es = ops.flatMap( _._2.checkSyntax())
-      val err = e0 ++ es
-
-      err.length match {
-        case 0 => None
-        case 1 => Some(err.head)
-        case _ => Some( SyntaxErrorObjects(err, toString))
-      }
-    }
+    override def expressionWith[T](f: String => Either[String, T]): String =
+      if (ops.nonEmpty)
+        ops.map { case (op, exp) => s" $op ${exp.expressionWith(f)}" }
+          .mkString(s"( ${base.expressionWith(f)}", " ", " )")
+      else base.expressionWith(f)
   }
 }
 
@@ -278,11 +259,15 @@ object SpecObjectRuleTree extends App {
   )
   val f = (s: String) => m.get(s).toRight( s"not-found: $s")
 
+  val g = f.andThen( _.map( _.toLong))
+
   val expr= parse(s)
+
   show(expr)
 
-  expr.foreach( _.checkSyntax[Long]().foreach(show))
+  val z = expr.flatMap( _.evaluateWith(g))
 
-  val z = expr.map( _.evaluateWith[Double](f.andThen( _.map( _.toDouble))))
+  expr.foreach( e => println(e.expressionWith(g)) )
+
   show(z)
 }

@@ -101,6 +101,7 @@ sealed trait SyntaxErrorObject extends SyntaxError {
   }
 }
 
+
 case class SyntaxErrorObjects(e: List[SyntaxErrorObject], exp: String) extends SyntaxErrorObject {
   override def toJson: JValue = {
     JObject(

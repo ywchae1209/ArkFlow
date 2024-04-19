@@ -8,7 +8,7 @@ import validator.utils.StringUtil.parseWith
 
 object ObjectRuleParser {
 
-  def parse(s: String): Either[InvalidSyntaxObjectRule, BoolOps] =
+  def compile(s: String): Either[InvalidSyntaxObjectRule, BoolOps] =
     parseWith(numericBoolExpression(_))(s).left.map( InvalidSyntaxObjectRule)
 
   ////////////////////////////////////////////////////////////////////////////////

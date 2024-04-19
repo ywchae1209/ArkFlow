@@ -2,11 +2,15 @@ package validator.jsonpath.rule
 
 import fastparse.NoWhitespace._
 import fastparse._
-import org.json4s.JsonAST.{JBool, JObject}
-import org.json4s.{JDouble, JLong, JNothing, JNull, JString, JValue}
-import validator.jsonpath.rule.JPathParser.{jsonPath, literal}
+import validator.jsonpath.rule.JPathAST._
+import validator.jsonpath.rule.JPathParser.jsonPath
 import validator.utils.StringUtil.parseWith
 
+
+/*
+  java-script version spec :: https://www.npmjs.com/package/jsonpath
+  java version sepc        :: https://github.com/json-path/JsonPath
+ */
 object JPathParser {
 
   //////////////////////////////////////////////////
@@ -86,7 +90,7 @@ object JPathParser {
 
   private def number[$: P] = num.map( _.toInt)        // todo :: one more think
 
-  val char_not_allowed_in_field = """*.[]()=!<>""" + " \r\n\t"
+  val char_not_allowed_in_field = """*.[]()=!<>:"'""" + " \r\n\t"
 
   private def field[$: P] = P( CharsWhile( !char_not_allowed_in_field.contains(_)).rep(1).!)
   private def field_quoted[$: P] = P(unescapedSingleQuoted | unescapedDoubleQuoted)
@@ -119,13 +123,14 @@ object JPathParser {
   private def `[*]`[$: P]   = P( `[` ~ (`*` | (`'`~ `*` ~`'`) | (`"` ~ `*` ~ `"`) ) ~ `]`).map( _ => AllFields)
   private def `.*`[$:P]     = P(`.` ~ `*`).map(_ => AllFields)
 
-  private def `.key` [$: P]  = P( `.` ~ field).map( FieldSelector.field)
-  private def `..key` [$: P] = P( `..` ~ field).map( FieldSelector.recursiveField)
+  private def `.key` [$: P]  = P( `.` ~ (field| field_quoted)).map( FieldSelector.field)
+  private def `..key` [$: P] = P( `..` ~ ( field| field_quoted)).map( FieldSelector.recursiveField)
   private def `[keys]`[$: P] = P( `[` ~ field_quoted.rep(1, `,`) ~ `]`).map( FieldSelector.fields)
 
   ////////////////////////////////////////////////////////////////////////////////
-  // childSelector
+  // childSelector, route
   ////////////////////////////////////////////////////////////////////////////////
+  private def function[$: P] = P( arraySelector | fieldSelector )     // todo .function(literal1,literal2,...) :default
   private def selector[$: P] = P( arraySelector | fieldSelector )
   private def route[$: P]    = P( (selector | filterPredicate).rep)
 
@@ -197,149 +202,21 @@ object JPathParser {
   private def factorBool[$: P]: P[FilterPredicate] = P( paransBool | compExpr)
   private def paransBool[$: P]  = P( `(` ~/ or ~ `)` )
 
-  ////////////////////////////////////////////////////////////////////////////////
-  // AST
-  ////////////////////////////////////////////////////////////////////////////////
-  sealed trait Token
-
-  sealed trait JPath extends Token
-
-  sealed trait Position extends JPath {
-    override def toString: String = this match {
-      case Root => "$"
-      case Current => "@"
-    }
-  }
-  final case object Root    extends Position
-  final case object Current extends Position
-
-  sealed trait FieldSelector extends JPath {
-    override def toString: String = this match {
-      case Field(name)          => "." + name
-      case Fields(names)        => names.mkString("[",",","]")
-      case RecursiveField(name) => ".." + name
-      case AllFields            => ".*"
-      case RecursiveAllFields   => "..*"
-    }
-  }
-  final case class Field(name: String)          extends FieldSelector
-  final case class Fields(names: List[String])  extends FieldSelector
-  final case class RecursiveField(name: String) extends FieldSelector
-  final case object AllFields                   extends FieldSelector
-  final case object RecursiveAllFields          extends FieldSelector
-
-  object FieldSelector {
-    def recursiveField(s: String) = new RecursiveField(s)
-    def field( s: String ) = Field(s)
-    def fields( s: Seq[String] ) = if(s.length == 1) Field(s.head) else new Fields(s.toList)
-    val AllField = AllFields
-  }
-
-  //////////////////////////////////////////////////
-  sealed trait ArraySelector extends JPath {
-    private def m[T](t: Option[T]) = t.map(_.toString).getOrElse("")
-
-    override def toString: String = this match {
-      case Slice(s, e, t) => s"[${m(s)}:${m(e)}:${t}]"
-      case Random(index)  => index.mkString("[", ",", "]")
-      case All            => "[*]"
-    }
-  }
-  final case class Slice(start: Option[Int], end: Option[Int], step: Int) extends ArraySelector
-  final case class Random( index: Seq[Int]) extends ArraySelector
-  final case object All extends ArraySelector
-
-  object Slice {
-    def apply(slice: (Option[Int], Option[Option[Int]], Option[Option[Int]])): ArraySelector = {
-      slice match {
-        case (None, None, None) => All
-        case (start, end, step) => Slice(start, end.flatten, step.flatten.getOrElse(1))
-      }
-    }
-  }
-
-  //////////////////////////////////////////////////
-  sealed trait FilterValue extends Token {
-    override def toString: String = this match {
-      case Query(p, route) => s"_${p}_" + route.mkString
-      case Literal(jv)     => jv.values.toString
-    }
-  }
-  final case class Query(p: Position, route: List[JPath] ) extends FilterValue
-  final case class Literal(jv: JValue) extends FilterValue
-
-  object Literal {
-    def long(s: String) = Literal(JLong(s.toLong))
-    def double(s: String) = Literal(JDouble(s.toDouble))
-    def string(s: String) = Literal(JString(s))
-    def boolean(b: Boolean) = if(b) True else False
-
-    val True  = Literal(JBool(true))
-    val False = Literal(JBool(true))
-    val Null  = Literal(JNull)
-    val empty = Literal(JNothing)
-  }
-
-  //////////////////////////////////////////////////
-  sealed trait FilterPredicate extends JPath {
-    override def toString: String = this match {
-      case MatchRegex(q, regex)   => s"$q =~ $regex"
-      case Contains(q)            => q.toString
-      case Compare(lhs, op, rhs)  => s"($lhs $op $rhs)"
-      case When(lhs, op, rhs)     => s"($lhs $op $rhs)"
-      case BasePredicate(filter)  => s"[? $filter ]"
-    }
-  }
-  final case class MatchRegex(q: Query, regex: String) extends FilterPredicate
-  final case class Contains(q: Query) extends FilterPredicate
-  final case class Compare( lhs: FilterValue, op: Comparator, rhs: FilterValue) extends FilterPredicate
-  final case class When( lhs: FilterPredicate, op: BinaryBoolOp, rhs: FilterPredicate) extends FilterPredicate
-  final case class BasePredicate(filter: FilterPredicate) extends FilterPredicate
-
-  case class RecursiveFilter(filter: FilterPredicate) extends JPath {
-    override def toString: String = s"..*$filter"
-  }
-
-  //////////////////////////////////////////////////
-  sealed trait Comparator extends Token {
-    override def toString: String = this match {
-      case Eq => "=="
-      case Neq => "!="
-      case Gt => ">"
-      case Lt => "<"
-      case Gte => ">="
-      case Lte => "<="
-    }
-  }
-  final case object Eq extends Comparator
-  final case object Neq extends Comparator
-  final case object Gt extends Comparator
-  final case object Lt extends Comparator
-  final case object Gte extends Comparator
-  final case object Lte extends Comparator
-
-  //////////////////////////////////////////////////
-  sealed trait BinaryBoolOp extends Token {
-    override def toString: String = this match {
-      case And => "&&"
-      case Or  => "||"
-    }
-  }
-  final case object And extends BinaryBoolOp
-  final case object Or extends BinaryBoolOp
-
 }
 
 object SpecJsonPathParser extends App{
 
   def show(s: String) = {
     val p = parseWith(jsonPath(_))(s)
-    println(s)
-    p.foreach(println)
+    println("Expr: " + s)
+    p.foreach{ s =>
+      println("AST:  " + s)
+      println("Show: " + s.show)
+    }
     println("=============================")
   }
   val ss = List(
-    "$.store.book[*].author",
+    "$.'store'.book[*].'author name'",
     "$..author",
     "$.store.*",
     "$.store..price",
@@ -365,6 +242,5 @@ object SpecJsonPathParser extends App{
   )
 
   ss.foreach(show)
-
 }
 

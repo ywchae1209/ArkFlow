@@ -17,7 +17,7 @@ case class SyntaxValue(expr: ValueCondition) {
 object SyntaxValue {
 
   def apply(expr: String): Either[SyntaxError, SyntaxValue] = {
-      ValueRuleParser.parse(expr)
+      ValueRuleParser.compile(expr)
         .flatMap{ f =>
           f.checkSyntaxWith(UserFunctionTable)  // syntax-error check.
             .map(e => Left(e))

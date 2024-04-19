@@ -50,7 +50,7 @@ object SyntaxObject{
     val (lefts, rights) =
       expr
         .map( e =>
-          ObjectRuleParser.parse(e).map( _ -> e) )
+          ObjectRuleParser.compile(e).map( _ -> e) )
         .partitionMap(identity)
 
     if(lefts.nonEmpty)

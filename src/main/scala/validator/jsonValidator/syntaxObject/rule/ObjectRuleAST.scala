@@ -261,7 +261,7 @@ object SpecObjectRuleTree extends App {
 
   val g = f.andThen( _.map( _.toLong))
 
-  val expr= parse(s)
+  val expr= compile(s)
 
   show(expr)
 

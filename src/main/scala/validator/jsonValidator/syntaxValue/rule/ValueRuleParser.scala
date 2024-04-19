@@ -11,7 +11,7 @@ import validator.utils.StringUtil.parseWith
  */
 object ValueRuleParser {
 
-  def parse(s: String): Either[InvalidSyntaxValueRule, VPredicates]
+  def compile(s: String): Either[InvalidSyntaxValueRule, VPredicates]
   = parseWith(syntaxValueRule(_))(s).left.map( InvalidSyntaxValueRule)
 
   ////////////////////////////////////////////////////////////////////////////////

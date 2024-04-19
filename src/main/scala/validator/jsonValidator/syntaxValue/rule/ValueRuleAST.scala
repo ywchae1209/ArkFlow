@@ -92,7 +92,7 @@ object SpecValueRuleAST extends App {
     "|| _oneOf(a, b, b, 'this is \\'' ) && _regex(1,2,3) || _shorterThan(a)"
 
   // parsing to ValueFunction
-  val r = ValueRuleParser.parse(s)
+  val r = ValueRuleParser.compile(s)
 
 //  r.foreach(p => {
 //    show("=== expression ===")

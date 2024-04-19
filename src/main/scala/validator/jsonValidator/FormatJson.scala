@@ -218,14 +218,21 @@ case class FormatObject(fields: Map[String, FormatJson],
   private val syntaxObjectAsFloat = syntax.exists(_._2)
 
   private val syntaxString = syntaxObject.map( _.toString).getOrElse("")
-  private val objectSyntaxFalse = ObjectSyntaxFalse( syntaxString)
+
+  private def objectSyntaxFalse(str: List[String]): ObjectSyntaxFalse = ObjectSyntaxFalse( syntaxString, str)
 
   override def toString: String = fields.mkString("{\n", ",\n", "}\n")
 
-  private def evaluateSynaxObject(j: JValue)
-  : Either[ObjectSyntaxError, Boolean] = {
-    syntaxObject.map( _.checkWith(j, syntaxObjectAsFloat)
-      .left.map( e => ObjectSyntaxError(e))).getOrElse(Right(true))
+  private def evaluateSyntaxObject(j: JValue)
+  : Either[Fails, Boolean] = {
+    val ret =
+      syntaxObject.map( so =>
+        so.checkWith(j, syntaxObjectAsFloat)
+          .left.map( e => ObjectSyntaxError(e))
+          .flatMap( b => if(b) Right(b) else Left( objectSyntaxFalse( so.expressionWith(j))))
+      )
+      .getOrElse(Right(true))
+    ret
   }
 
   private def extractFields( l: List[(String, JValue)])
@@ -261,16 +268,17 @@ case class FormatObject(fields: Map[String, FormatJson],
 
       case Right(l) =>
 
-        val sf = evaluateSynaxObject(j)
+        val sf = evaluateSyntaxObject(j)
         val ef = extractFields(l)
 
         (sf, ef) match {
           case (Left(a), Left(b))      => Left( new ObjectError( a+:b.es))
           case (Left(a), _)            => Left( new ObjectError( List(a)))
-          case (Right(false), Left(b)) => Left( new ObjectError( objectSyntaxFalse +: b.es ))
-          case (Right(false), _)       => Left( new ObjectError( List(objectSyntaxFalse) ))
           case (Right(true), Left(b))  => Left(b)
           case (Right(true), Right(b)) => Right(JObject(b))
+          case (Right(false), _)       =>
+            // Right(false) must replaced with Left(ObjectSyntaxFalse)
+            throw new Exception(s"this must not happen :: evaluate :: ${toString}")
         }
     }
     ret
@@ -300,7 +308,7 @@ object FormatObject {
       k -> f
   }
 
-  // todo :::
+  // todo ::: multiple SyntaxObjectRule
   def makeSyntaxObjectRule(jv: JValue) = {
 
   }

@@ -88,18 +88,20 @@ case class ValueError( es: List[EvaluationError]) extends Fails {
   )
 }
 
-case class ObjectSyntaxFalse( e: String) extends Fails {
+case class ObjectSyntaxFalse( e: String, str: List[String]) extends Fails {
   override def toJson = JObject(
     "type" -> JString("Object-Evaluation result is false"),
     "expression" -> JString(e),
+    "interim" -> JArray( str.map( JString)),
     "result" -> JString("false")
   )
 }
 
+// todo
 case class ObjectSyntaxError( es: EvaluationError) extends Fails {
   override def toJson = JObject(
     "type" -> JString("Object-Evaluation Error"),
-    "error" -> es.toJson
+    "error" -> es.toJson,
   )
 }
 
@@ -113,7 +115,7 @@ case class ObjectError( es: List[Fails]) extends Fails {
       es.map {
         case FieldError(k, f) => Right(k -> f.toJson)
         case e@ObjectSyntaxError(_) => Right( "$$$$" -> e.toJson )
-        case o@ObjectSyntaxFalse(_) => Right( "$$$$" -> o.toJson )
+        case o@ObjectSyntaxFalse(_, _) => Right( "$$$$" -> o.toJson )
         case o =>
           StringUtil.show(s"ObjectError ::: $warning : $o")
           Left(o.toJson)

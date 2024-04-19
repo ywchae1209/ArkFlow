@@ -8,19 +8,29 @@ import validator.utils.JsonUtil.JValueWithPower
 
 case class SyntaxObject( syntaxBool: List[(BoolOps, String)]) {
 
+  val routeSep = "\\."    // todo :: may need escape.
+
   override def toString: String = syntaxBool.map(_._1.toString).mkString(",")
 
   def checkWith(jv: JValue, asFloat: Boolean = false): Either[EvalErrors, Boolean] = {
-
-    val routeSep = "\\."    // todo :: may need escape.
     if( asFloat)
-      eval(s => {
-        jv.getJValue0(s.split(routeSep)).toDouble})    // String or Numeric to Double
+      eval(s => { jv.getJValue0(s.split(routeSep)).toDouble()})    // String or Numeric to Double
     else
-      eval(s => {
-        jv.getJValue0(s.split(routeSep)).toLong        // String or Numeric to Long
-      })
+      eval(s => { jv.getJValue0(s.split(routeSep)).toLong()})      // String or Numeric to Long
   }
+
+  def expressionWith[T]( jv: JValue, asFloat: Boolean = false)
+  : List[String] = {
+
+    if( asFloat) {
+      val f = (s:String) => jv.getJValue0(s.split(routeSep)).toDouble()    // String or Numeric to Double
+      syntaxBool.map( _._1.expressionWith(f))
+    } else {
+      val f = (s:String) => jv.getJValue0(s.split(routeSep)).toLong()    // String or Numeric to Double
+      syntaxBool.map( _._1.expressionWith(f))
+    }
+  }
+
 
   private def eval[T: Numeric](f: String => Either[String, T]) = {
     val (lefts, rights) = syntaxBool.map(_._1.evaluateWith(f)).partitionMap(identity)

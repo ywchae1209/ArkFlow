@@ -18,14 +18,15 @@ object ObjectRuleParser {
   private def numericBoolExpression[$: P]: P[BoolOps] = P(or ~ sp ~ End)
   private def numericExpression[$: P]: P[NumericOps] = P(append ~ sp ~ End)
 
-  private def sp[$: P] = P(CharsWhileIn(" \r\n\t").rep(max = 80))
+  private def sp[$: P]= P(CharsWhileIn(" \r\n\t").rep(max = 80))
   private def `(`[$: P] = P(sp ~ "(" ~ sp)
   private def `)`[$: P] = P(sp ~ ")" ~ sp)
+
   private def cl[$: P] = P(CharPred(c => c != '}'))
   private def el[$: P] = P("\\}") // note:: if want to use "}" in key name, escape by "\\"
 
   ////////////////////////////////////////////////////////////////////////////////
-  private def number[$: P]: P[Number] = P(sp ~ CharIn("0-9").rep(1).! ~ sp).map(s => Number(s.toInt))
+  private def number[T: P]: P[Number] = P(sp ~ CharIn("0-9").rep(1).! ~ sp).map(s => Number(s.toInt))
 
   private def term[$: P]: P[Term] = P(sp ~ "${" ~ (el.! | cl.!).rep(1) ~ "}" ~ sp).map { s =>
     val neo = s.map(c => if (c == "\\}") "}" else c).mkString

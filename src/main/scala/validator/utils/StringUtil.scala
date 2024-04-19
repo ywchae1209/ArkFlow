@@ -19,7 +19,7 @@ object StringUtil {
   def decodeUrl(s: String): Option[String] = lift(s).map( java.net.URLDecoder.decode(_, StandardCharsets.UTF_8))
 
   ////////////////////////////////////////////////////////////////////////////////
-  // zip      todo :: for more readability
+  // todo :: for more readability
   ////////////////////////////////////////////////////////////////////////////////
   def args2map(args: Array[String], keywords: String)
   : Map[String, Array[String]] = {
@@ -108,7 +108,7 @@ object StringUtil {
   // String Parse Util
   ////////////////////////////////////////////////////////////////////////////////
 
-  def toFailMessage(s: String, p: Int, extra: Parsed.Extra): String = {
+  private def toFailMessage(s: String, p: Int, extra: Parsed.Extra): String = {
 
     val msg = s"syntax error :: $s"
 

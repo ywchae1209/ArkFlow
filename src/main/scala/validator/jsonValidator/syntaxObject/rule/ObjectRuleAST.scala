@@ -77,7 +77,7 @@ object ObjectRuleAST {
     }
 
     override def expressionWith[T](f: String => Either[String, T]): String =
-      s"( ${lhs.expressionWith(f)} $op ${rhs.expressionWith(f)}"
+      s"(${lhs.expressionWith(f)} $op ${rhs.expressionWith(f)})"
 
   }
 

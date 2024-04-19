@@ -35,7 +35,7 @@ object SpecJsonValidator extends App {
       "DR_NM": "_any",												### "갑돌이", // 의사명
       "RCPT_GB": "_oneOf(입원,외래,응급,퇴원,중간)",											### "외래", // 영수증 유형 [입원,외래,응급,퇴원,중간]
       "TRT_YMD": "_digitOr(-)",											### "2022-07-18", // 진료일
-      "$$$$" : "${CUSTOM1} == ${CUSTOM1}",
+      "$$$$" : "${CUSTOM1} > ${CUSTOM1}",
       "TRT_S_YMD": "_date(${yyyy}-${mm}-${dd}) || _digitOr(-)",										### "2022-07-18", // 진료시작일
       "TRT_E_YMD": "_any || _between(0, 1000)",										### "2022-07-18", // 진료종료일
       "DR_CD": "_any",												### "6", // 의사번호

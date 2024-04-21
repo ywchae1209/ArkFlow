@@ -2,6 +2,7 @@ package validator.jsonpath.rule
 
 import org.json4s.{JDouble, JLong, JNothing, JNull, JString, JValue}
 import org.json4s.JsonAST.JBool
+import validator.utils.JsonUtil.JValueWithPower
 
 object JPathAST {
 
@@ -10,9 +11,40 @@ object JPathAST {
   ////////////////////////////////////////////////////////////////////////////////
   sealed trait Token {
     def show: String
+
   }
 
   sealed trait JPath extends Token
+  {
+    def query(jv: JValue): LazyList[JValue] = this match {
+      case position: Position => {
+        case Root => LazyList(jv)
+        case Current => LazyList(jv)
+      }
+      case selector: FieldSelector => {
+        case Field(name)            => jv \~ name
+        case Fields(names)          => jv \~ (names:_*)
+        case RecursiveField(name)   => jv \\~ name
+        case AllFields              => jv.\~~
+        case RecursiveAllFields     => jv.\\~~
+      }
+
+      case selector: ArraySelector => {
+        case Slice(start, end, step)=> jv.slice( start, end, step)
+        case Random(index)          => jv.random(index)
+        case All                    => jv.\~~
+
+      }
+      case predicate: FilterPredicate => predicate match {
+        case MatchRegex(q, regex)   => ???
+        case Contains(q)            => ???
+        case Compare(lhs, op, rhs)  => ???
+        case When(lhs, op, rhs)     => ???
+        case BasePredicate(filter) => ???
+      }
+      case RecursiveFilter(filter) => ???
+    }
+  }
 
   sealed trait Position extends JPath {
     override def show: String = this match {
@@ -39,9 +71,9 @@ object JPathAST {
   final case object RecursiveAllFields          extends FieldSelector
 
   object FieldSelector {
-    def recursiveField(s: String) = new RecursiveField(s)
+    def recursiveField(s: String) = RecursiveField(s)
     def field( s: String ) = Field(s)
-    def fields( s: Seq[String] ) = if(s.length == 1) Field(s.head) else new Fields(s.toList)
+    def fields( s: Seq[String] ): FieldSelector = if(s.length == 1) Field(s.head) else new Fields(s.toList)
     val AllField = AllFields
   }
 
@@ -140,6 +172,9 @@ object JPathAST {
 
   object JPathASTFeature {
     // todo :::
+    def query(path: JPath, jv: JValue) = {
+
+    }
 
 
   }

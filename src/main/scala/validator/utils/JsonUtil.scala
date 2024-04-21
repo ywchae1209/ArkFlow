@@ -3,6 +3,7 @@ package validator.utils
 import org.json4s.jackson.JsonMethods
 import org.json4s.{JArray, JBool, JDecimal, JDouble, JInt, JLong, JNothing, JNull, JObject, JSet, JString, JValue}
 import May.{mayOr, maybe}
+import org.json4s.JsonAST.JField
 
 import scala.annotation.tailrec
 
@@ -142,6 +143,64 @@ object JsonUtil {
   }
 
   implicit class JValueWithPower(j: JValue) {
+
+
+    // todo
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    def \~ (name: String*): LazyList[JValue] = {
+      name.to(LazyList).map( j \ _)
+    }
+    def \~~ : LazyList[JValue] = j.children.to(LazyList)
+    def \\? ( pred: String => Boolean): LazyList[JValue] = {
+
+      def find(json: JValue): LazyList[JValue] = json match {
+        case JObject(l) =>
+          l.to(LazyList)
+            .foldLeft(LazyList[JValue]()) { case (b, (name, value)) =>
+              b.lazyAppendedAll(
+                if (pred(name)) value +: find(value)
+                else find(value)
+              )
+            }
+        case JArray(l) =>
+          l.to(LazyList)
+            .foldLeft(LazyList[JValue]())((b, json) =>
+              b.lazyAppendedAll( find(json)) )
+        case _ =>
+          LazyList.empty
+      }
+
+      find(j)
+
+    }
+    def \\~ (name: String): LazyList[JValue] = \\?( _ == name)
+
+    def \\~~ : LazyList[JValue] = \\? ( _ => true)
+
+    def slice( start: Option[Int], end: Option[Int], step: Int)
+    : LazyList[JValue] = j match {
+        case JArray(l) =>
+          // todo :: spec
+          val len = l.length
+          val s0 = start.map( i => if(i < 0) len + i else i ).getOrElse(0)
+          val e0   = end.getOrElse(len)
+          val (from, to) = (s0 min e0, s0 max e0)
+          val is = from until to  by step
+
+          is.to(LazyList).flatMap( l.lift )
+
+        case _ => LazyList.empty
+      }
+
+    def random( index: Seq[Int])
+    : LazyList[JValue] = j match {
+      case JArray(l) => index.to(LazyList).flatMap( l.lift)
+      case _         => LazyList.empty
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
     def getJValue0(route: Seq[String])
     : JValue = JsonUtil.getJValue0(j, route)

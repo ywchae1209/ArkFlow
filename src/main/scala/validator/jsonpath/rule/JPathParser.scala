@@ -2,8 +2,10 @@ package validator.jsonpath.rule
 
 import fastparse.NoWhitespace._
 import fastparse._
+import org.json4s.JValue
 import validator.jsonpath.rule.JPathAST._
-import validator.jsonpath.rule.JPathParser.jsonPath
+import validator.jsonpath.rule.JPathParser.{compile, jsonPath}
+import validator.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
 import validator.utils.StringUtil.parseWith
 
 
@@ -12,6 +14,8 @@ import validator.utils.StringUtil.parseWith
   java version sepc        :: https://github.com/json-path/JsonPath
  */
 object JPathParser {
+
+  def compile(s: String) = parseWith(jsonPath(_))(s)
 
   //////////////////////////////////////////////////
   private def sp[$: P]= P(CharsWhileIn(" \r\n\t").rep(max = 80))
@@ -102,7 +106,7 @@ object JPathParser {
   private def arraySelector[$: P]
   = P(  all | random | slice )
 
-  private def all[$: P]    = P( `[` ~ (`*` | (`'`~ `*` ~`'`) | (`"` ~ `*` ~ `"`) ) ~ `]`).map( _ => All)
+  private def all[$: P]    = P( `[` ~ (`*` | (`'`~ `*` ~`'`) | (`"` ~ `*` ~ `"`) ) ~ `]`).map( _ => AllItems)
   private def random[$: P] = P( `[` ~ number.rep(1, `,`) ~ `]`).map(Random)
   private def slice[$: P]  = P( `[` ~ number.? ~ `:num`.? ~ `:num`.? ~ `]`).map( Slice.apply )
   private def `:num`[$: P] = P( `:` ~ number.?)
@@ -119,7 +123,7 @@ object JPathParser {
   private def fieldSelector[$: P]
   = P( `.*` | `..*`  | `[*]` | `.key` | `..key` | `[keys]` | recursiveFilter) // todo
 
-  private def `..*`[$:P]    = P(`..`~`*`).map(_ => RecursiveAllFields)    // todo :: ??
+  private def `..*`[$:P]    = P(`..`~`*`).map(_ => RecursiveAll)    // todo :: ??
   private def `[*]`[$: P]   = P( `[` ~ (`*` | (`'`~ `*` ~`'`) | (`"` ~ `*` ~ `"`) ) ~ `]`).map( _ => AllFields)
   private def `.*`[$:P]     = P(`.` ~ `*`).map(_ => AllFields)
 
@@ -148,10 +152,13 @@ object JPathParser {
 
   ////////////////////////////////////////////////////////////////////////////////
   // Filter-predicate
-  private def filterPredicate[$: P]: P[FilterPredicate] = P( `[` ~ `?` ~ `(` ~ boolExpr ~ `)` ~ `]`)
+  private def filterPredicate[$: P]: P[PredicateSelector] = P( `[` ~ `?` ~ `(` ~ boolExpr ~ `)` ~ `]`)
   private def recursiveFilter[$: P] = P( `..` ~ `*`.? ~ filterPredicate).map( RecursiveFilter)    // todo
 
-  private def query[$: P] = P ( (current | root) ~ route).map{ case (p, ps) => Query(p, ps.toList) }
+  private def query[$: P] = P ( (current | root).? ~ route).map{
+    case (Some(p), ps) => Query(p, ps.toList)
+    case (None, ps) => Query(Current, ps.toList)
+  }
 
   ////////////////////////////////////////////////////////////////////////////////
 
@@ -159,10 +166,10 @@ object JPathParser {
 
   ////////////////////////////////////////////////////////////////////////////////
   // compare-expr
-  private def compExpr[$: P]: P[FilterPredicate] = P ( expr0 | expr1 | expr2)
+  private def compExpr[$: P]: P[PredicateSelector] = P ( expr0 | expr1 | expr2)
 
   private def expr0[$: P] = P( query ~ `=~` ~ value_quoted).map{
-    case (q, regex) => MatchRegex(q, regex)
+    case (q, regex) => MatchRegex(q, regex, regex.r)
   }
 
   private def expr1[$: P] = P( query ~ (comparator ~ (query | literal)).?).map{
@@ -199,48 +206,8 @@ object JPathParser {
   private def or[$: P]  = P( and ~ (`||` ~ and).rep).map{
     case (base, rs) => rs.foldLeft(base)((l, r) => When(l, Or, r))
   }
-  private def factorBool[$: P]: P[FilterPredicate] = P( paransBool | compExpr)
+  private def factorBool[$: P]: P[PredicateSelector] = P( paransBool | compExpr)
   private def paransBool[$: P]  = P( `(` ~/ or ~ `)` )
 
-}
-
-object SpecJsonPathParser extends App{
-
-  def show(s: String) = {
-    val p = parseWith(jsonPath(_))(s)
-    println("Expr: " + s)
-    p.foreach{ s =>
-      println("AST:  " + s)
-      println("Show: " + s.show)
-    }
-    println("=============================")
-  }
-  val ss = List(
-    "$.'store'.book[*].'author name'",
-    "$..author",
-    "$.store.*",
-    "$.store..price",
-    "$..book[2]",       // todo
-    "$..book[-2]",
-    "$..book[1,2]",
-    "$..book[:2]",
-    "$.book[1:2]",      // <<<
-    "$..book[1:2]",     // <<<
-    "$..book[-2:]",     // <<<
-    "$..book[2:]",      // <<<
-    "$..book[?(@.isbn)]",
-    "$.store.book[?(@['price'] < 10)]",
-    "$..book[?(@.price <= $['expensive'])]",
-    "$..book[?(@.author =~ '/.*REES/i')]",
-    "$..*",
-    "$..book",
-    "$['store']['book'][0]['title']",
-    "$['store']['book'][0]['title'].*[?( @.name =~ 'abc*' || @.name =~ 'year')]",
-    "$.book.store[?(@.price <= $['expensive'])]",
-    "$.this[? ( (@.price < 10 && @.category == 'fiction') || (@.name == 'this') )]",
-    "$.store.book[-1].title"
-  )
-
-  ss.foreach(show)
 }
 

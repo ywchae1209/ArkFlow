@@ -14,19 +14,19 @@ case class SyntaxObject( syntaxBool: List[(BoolOps, String)]) {
 
   def checkWith(jv: JValue, asFloat: Boolean = false): Either[EvalErrors, Boolean] = {
     if( asFloat)
-      eval(s => { jv.getJValue0(s.split(routeSep)).toDouble()})    // String or Numeric to Double
+      eval(s => { jv.getJValue0(s.split(routeSep):_*).toDouble()})    // String or Numeric to Double
     else
-      eval(s => { jv.getJValue0(s.split(routeSep)).toLong()})      // String or Numeric to Long
+      eval(s => { jv.getJValue0(s.split(routeSep):_*).toLong()})      // String or Numeric to Long
   }
 
   def expressionWith[T]( jv: JValue, asFloat: Boolean = false)
   : List[String] = {
 
     if( asFloat) {
-      val f = (s:String) => jv.getJValue0(s.split(routeSep)).toDouble()    // String or Numeric to Double
+      val f = (s:String) => jv.getJValue0(s.split(routeSep):_*).toDouble()    // String or Numeric to Double
       syntaxBool.map( _._1.expressionWith(f))
     } else {
-      val f = (s:String) => jv.getJValue0(s.split(routeSep)).toLong()    // String or Numeric to Double
+      val f = (s:String) => jv.getJValue0(s.split(routeSep):_*).toLong()    // String or Numeric to Double
       syntaxBool.map( _._1.expressionWith(f))
     }
   }

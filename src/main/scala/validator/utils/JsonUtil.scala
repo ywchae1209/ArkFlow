@@ -1,11 +1,13 @@
 package validator.utils
 
 import org.json4s.jackson.JsonMethods
-import org.json4s.{JArray, JBool, JDecimal, JDouble, JInt, JLong, JNothing, JNull, JObject, JSet, JString, JValue}
+import org.json4s.{DefaultFormats, JArray, JBool, JDecimal, JDouble, JInt, JLong, JNothing, JNull, JNumber, JObject, JSet, JString, JValue, JsonAST}
 import May.{mayOr, maybe}
 import org.json4s.JsonAST.JField
+import org.json4s.jackson.Serialization.writePretty
 
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 object JsonUtil {
 
@@ -21,6 +23,7 @@ object JsonUtil {
   }
 
   ////////////////////////////////////////////////////////////////////////////////
+
 
   def getJValue(j: JValue, route: Seq[String])
   : Either[String, JValue] = getJValue0(j, route) match {
@@ -144,13 +147,50 @@ object JsonUtil {
 
   implicit class JValueWithPower(j: JValue) {
 
+    implicit val formats: DefaultFormats.type = DefaultFormats
+    def pretty: String = writePretty(j)
+
+
+    def nonEmpty = j match {
+      case JNothing => None
+      case _ => Some(j)
+    }
 
     // todo
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    def \~ (name: String*): LazyList[JValue] = {
-      name.to(LazyList).map( j \ _)
+    def asList(): List[JValue] = j match {
+      case JArray(l) => l
+      case o => List(o)
     }
+
+    def contains( j0: JValue): Boolean = {
+      // todo
+      true
+    }
+
+    def =~ (r: Regex) = j match {
+      case JString(s) =>
+        val found = r.findFirstIn(s).isDefined
+        if(!found) println( s"not matched =~ regex: ${j}")
+        found
+      case _ =>
+        println( s"not String =~ regex: ${j}")
+        false
+    }
+
+
+    def \~ (name: String*): LazyList[JValue] = {
+
+      def find (pred: String => Boolean): Option[JValue] = j match {
+        case JObject(l) => l.find( kv => pred( kv._1)).map( _._2)
+        case o => None
+      }
+
+      name.to(LazyList).flatMap( k => find(_ == k) )
+    }
+
     def \~~ : LazyList[JValue] = j.children.to(LazyList)
+
     def \\? ( pred: String => Boolean): LazyList[JValue] = {
 
       def find(json: JValue): LazyList[JValue] = json match {
@@ -158,14 +198,14 @@ object JsonUtil {
           l.to(LazyList)
             .foldLeft(LazyList[JValue]()) { case (b, (name, value)) =>
               b.lazyAppendedAll(
-                if (pred(name)) value +: find(value)
+                if ( pred(name) ) value +: find(value)
                 else find(value)
               )
             }
         case JArray(l) =>
           l.to(LazyList)
-            .foldLeft(LazyList[JValue]())((b, json) =>
-              b.lazyAppendedAll( find(json)) )
+            .foldLeft(LazyList[JValue]())((b, json) => b.lazyAppendedAll( find(json)) )
+
         case _ =>
           LazyList.empty
       }
@@ -173,23 +213,36 @@ object JsonUtil {
       find(j)
 
     }
+
     def \\~ (name: String): LazyList[JValue] = \\?( _ == name)
 
-    def \\~~ : LazyList[JValue] = \\? ( _ => true)
+    def \\~~ : LazyList[JValue] = {
+
+      def all(json: JValue): LazyList[JValue] = {
+        val ar = json.\~~
+        ar.lazyAppendedAll(
+          ar.foldLeft(LazyList[JValue]())((b, json) => b.lazyAppendedAll( all(json)) )
+        )
+      }
+
+      all(j)
+    }
 
     def slice( start: Option[Int], end: Option[Int], step: Int)
     : LazyList[JValue] = j match {
+
         case JArray(l) =>
-          // todo :: spec
           val len = l.length
           val s0 = start.map( i => if(i < 0) len + i else i ).getOrElse(0)
           val e0   = end.getOrElse(len)
           val (from, to) = (s0 min e0, s0 max e0)
-          val is = from until to  by step
+          val is = from until to  by step   // todo :w
+          println( is.mkString("Range( ", ",", ")"))
 
           is.to(LazyList).flatMap( l.lift )
 
-        case _ => LazyList.empty
+        case _ => println(s"not array: $j")
+          LazyList.empty
       }
 
     def random( index: Seq[Int])
@@ -201,8 +254,7 @@ object JsonUtil {
     ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
-    def getJValue0(route: Seq[String])
+    def getJValue0(route: String*)
     : JValue = JsonUtil.getJValue0(j, route)
 
     def getObjectValues()
@@ -216,16 +268,16 @@ object JsonUtil {
     : Either[String, Long] = JsonUtil.getLong(j)
 
     def getLong(route: Seq[String])
-    : Either[String, Long] = getJValue0(route).toLong()
+    : Either[String, Long] = getJValue0(route:_*).toLong()
 
     def getBigInt(route: Seq[String])
-    : Either[String, BigInt] = getJValue0(route).toBigInt()
+    : Either[String, BigInt] = getJValue0(route:_*).toBigInt()
 
     def getDouble(route: Seq[String])
-    : Either[String, Double] = getJValue0(route).toDouble()
+    : Either[String, Double] = getJValue0(route:_*).toDouble()
 
     def getBigDecimal(route: Seq[String])
-    : Either[String, BigDecimal] = getJValue0(route).toBigDecimal()
+    : Either[String, BigDecimal] = getJValue0(route:_*).toBigDecimal()
 
     def toLong()
     : Either[String, Long] = JsonUtil.toLong(j)

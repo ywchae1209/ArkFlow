@@ -1,19 +1,16 @@
-package validator.jsonpath.rule
+package validator.jsonConverter.syntaxJsonpath.rule
 
 import fastparse.NoWhitespace._
 import fastparse._
-import org.json4s.JValue
-import validator.jsonpath.rule.JPathAST._
-import validator.jsonpath.rule.JPathParser.{compile, jsonPath}
-import validator.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
+import JsonPathAST._
 import validator.utils.StringUtil.parseWith
 
 
-/*
+/* ref)
   java-script version spec :: https://www.npmjs.com/package/jsonpath
   java version sepc        :: https://github.com/json-path/JsonPath
  */
-object JPathParser {
+object JsonPathParser {
 
   def compile(s: String) = parseWith(jsonPath(_))(s)
 
@@ -168,6 +165,7 @@ object JPathParser {
   // compare-expr
   private def compExpr[$: P]: P[PredicateSelector] = P ( expr0 | expr1 | expr2)
 
+  // ignore case == (?i)reg
   private def expr0[$: P] = P( query ~ `=~` ~ value_quoted).map{
     case (q, regex) => MatchRegex(q, regex, regex.r)
   }

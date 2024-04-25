@@ -7,10 +7,11 @@ import validator.utils.StringUtil
 
 trait ToJson{
 
-  def toJson: JValue
+  implicit val formats: DefaultFormats.type = DefaultFormats
 
+  def toJson: JValue
+  def pretty = writePretty(toJson)
   def show(header: String= ""): String =  {
-    implicit val formats: DefaultFormats.type = DefaultFormats
     StringUtil.show(header + "\n" + writePretty(toJson))
   }
 }

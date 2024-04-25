@@ -190,7 +190,7 @@ object Calc {
   private def toDoubleOr(s: String) = s.toDoubleOption.toRight(s"$s is not double".evalError)
 
   val getString: JValue => Either[EvalError, String]
-  = (jv: JValue) => jv.getString.fold( EvalError(_), Right(_))
+  = (jv: JValue) => jv.asString.fold( EvalError(_), Right(_))
 
   val _isString: JValue => Either[EvalError, Boolean]
   =  jv => getString(jv).map( _ => true)

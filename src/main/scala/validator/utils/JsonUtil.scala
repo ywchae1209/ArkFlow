@@ -3,7 +3,6 @@ package validator.utils
 import org.json4s.jackson.JsonMethods
 import org.json4s.{DefaultFormats, JArray, JBool, JDecimal, JDouble, JInt, JLong, JNothing, JNull, JNumber, JObject, JSet, JString, JValue, JsonAST}
 import May.{mayOr, maybe}
-import org.json4s.JsonAST.JField
 import org.json4s.jackson.Serialization.writePretty
 
 import scala.annotation.tailrec
@@ -23,24 +22,10 @@ object JsonUtil {
   }
 
   ////////////////////////////////////////////////////////////////////////////////
-
-
   def getJValue(j: JValue, route: Seq[String])
   : Either[String, JValue] = getJValue0(j, route) match {
     case JNothing => Left(s"not exist: $route in $j")
     case jv => Right(jv)
-  }
-
-  def getObjectValues(j: JValue)
-  : Either[String, List[(String, JValue)]] = j match {
-    case JObject(obj) => Right(obj)
-    case o => Left(s"not JObject : $o")
-  }
-
-  def getArrayValues(j: JValue)
-  : Either[String, List[JValue]] = j match {
-    case JArray(arr) => Right(arr)
-    case o => Left(s"not JArray : $o")
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -84,53 +69,107 @@ object JsonUtil {
     case o => Left(s"not numeric type : $o")
   }
 
-
   ////////////////////////////////////////////////////////////////////////////////
-  def getDouble(j: JValue): Either[String, Double]
+  def asObject0(j: JValue) : Option[JObject]
   = j match {
-    case JDouble(d) => Right(d)
-    case o => Left(s"not BigDecimal : $o")
+    case o@JObject(_) => Some(o)
+    case _ => None
   }
 
-  def getBigDecimal(j: JValue): Either[String, BigDecimal]
+  def asObjectValues0(j: JValue): Option[List[(String, JValue)]]
+  = asObject0(j).map( _.obj)
+
+  def asArray0(j: JValue): Option[JArray]
   = j match {
-    case JDecimal(d) => Right(d)
-    case o => Left(s"not BigDecimal : $o")
+    case a@JArray(_) => Some(a)
+    case o => None
   }
 
-  def getBigInt(j: JValue): Either[String, BigInt]
+  def asArrayValues0(j: JValue): Option[List[JValue]]
+  = asArray0(j).map( _.arr)
+
+  def asDouble0(j: JValue): Option[ Double]
   = j match {
-    case JInt(i) => Right(i)
-    case o => Left(s"not BigInt : $o")
+    case JDouble(d) => Some(d)
+    case o => None
   }
 
-
-  def getLong(j: JValue): Either[String, Long]
+  def asBigDecimal0(j: JValue): Option[BigDecimal]
   = j match {
-    case JLong(l) => Right(l)
-    case o => Left(s"not Long : $o")
+    case JDecimal(d) => Some(d)
+    case _ => None
   }
 
-  def getNumeric(j: JValue): Either[String, JValue]
+  def asBigInt0(j: JValue): Option[BigInt]
+  = j match {
+    case JInt(i) => Some(i)
+    case _ => None
+  }
+
+  def asLong0(j: JValue): Option[Long]
+  = j match {
+    case JLong(l) => Some(l)
+    case _ => None
+  }
+
+  def asNumeric0(j: JValue): Option[JValue]
   = j match {
     case JDouble(_)
          | JDecimal(_)
          | JInt(_)
-         | JLong(_) => Right(j)
-    case o => Left(s"not Numeric : $o")
+         | JLong(_) => Some(j)
+    case _ => None
   }
 
-
-  def getBoolean(j: JValue ): Either[String, Boolean]
+  def asBoolean0(j: JValue ): Option[Boolean]
   = j match {
-    case JBool(b) => Right(b)
-    case _ => Left("not Bool")
+    case JBool(b) => Some(b)
+    case _ => None
   }
 
-  def getString(j: JValue): Either[String, String]
+  def asString0(j: JValue): Option[String]
   = j match {
-    case JString(s) => Right(s)
-    case _ => Left("not String")
+    case JString(s) => Some(s)
+    case _ => None
+  }
+
+  def asObject(j: JValue): Either[String, JObject]
+  = asObject0(j).toRight( s"not JObject : $j")
+
+  def asObjectValues(j: JValue): Either[String, List[(String, JValue)]]
+  = asObject(j).map( _.obj)
+
+  def asArray(j: JValue): Either[String, JArray]
+  = asArray0(j).toRight( s"not JArray : $j")
+
+  def asArrayValues(j: JValue) : Either[String, List[JValue]]
+  = asArray(j).map( _.arr)
+
+  def asDouble(j: JValue) : Either[String, Double]
+  = asDouble0(j).toRight( s"not BigDecimal : $j")
+
+  def asBigDecimal(j: JValue) : Either[String, BigDecimal]
+  = asBigDecimal0(j).toRight(s"not BigDecimal : $j")
+
+  def asBigInt(j: JValue) : Either[String, BigInt]
+  = asBigInt0(j).toRight(s"not BigInt : $j")
+
+  def asLong(j: JValue) : Either[String, Long]
+  = asLong0(j).toRight(s"not Long : $j")
+
+  def asNumeric(j: JValue) : Either[String, JValue]
+  = asNumeric0(j).toRight(s"not Numeric : $j")
+
+  def asBoolean(j: JValue ) : Either[String, Boolean]
+  = asBoolean0(j).toRight(s"not Bool : $j")
+
+  def asString(j: JValue) : Either[String, String]
+  = asString0(j).toRight( "not String")
+
+  def isNothing(j: JValue) : Boolean
+  = j match {
+    case JNothing => true
+    case _ => false
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -150,7 +189,6 @@ object JsonUtil {
     implicit val formats: DefaultFormats.type = DefaultFormats
     def pretty: String = writePretty(j)
 
-
     def nonEmpty = j match {
       case JNothing => None
       case _ => Some(j)
@@ -161,11 +199,6 @@ object JsonUtil {
     def asList(): List[JValue] = j match {
       case JArray(l) => l
       case o => List(o)
-    }
-
-    def contains( j0: JValue): Boolean = {
-      // todo
-      true
     }
 
     def =~ (r: Regex) = j match {
@@ -236,8 +269,8 @@ object JsonUtil {
           val s0 = start.map( i => if(i < 0) len + i else i ).getOrElse(0)
           val e0   = end.getOrElse(len)
           val (from, to) = (s0 min e0, s0 max e0)
-          val is = from until to  by step   // todo :w
-          println( is.mkString("Range( ", ",", ")"))
+          val is = from until to  by step
+//          println( is.mkString("Range( ", ",", ")"))
 
           is.to(LazyList).flatMap( l.lift )
 
@@ -258,56 +291,48 @@ object JsonUtil {
     : JValue = JsonUtil.getJValue0(j, route)
 
     def getObjectValues()
-    : Either[String, List[(String, JValue)]] = JsonUtil.getObjectValues(j)
+    : Either[String, List[(String, JValue)]] = JsonUtil.asObjectValues(j)
 
     def getArrayValues()
-    : Either[String, List[JValue]] = JsonUtil.getArrayValues(j)
+    : Either[String, List[JValue]] = JsonUtil.asArrayValues(j)
 
     //////////////////////////////////////////////////
-    def getLong()
-    : Either[String, Long] = JsonUtil.getLong(j)
 
-    def getLong(route: Seq[String])
-    : Either[String, Long] = getJValue0(route:_*).toLong()
+    def toLong() : Either[String, Long] = JsonUtil.toLong(j)
+    def toBigInt() : Either[String, BigInt] = JsonUtil.toBigInt(j)
+    def toDouble() : Either[String, Double] = JsonUtil.toDouble(j)
+    def toBigDecimal() : Either[String, BigDecimal] = JsonUtil.toBigDecimal(j)
 
-    def getBigInt(route: Seq[String])
-    : Either[String, BigInt] = getJValue0(route:_*).toBigInt()
+    //////////////////////////////////////////////////////////////////
+    def asObject0(): Option[JObject] = JsonUtil.asObject0(j)
+    def asObjectValues0(): Option[List[(String, JValue)]] = JsonUtil.asObjectValues0(j)
+    def asArray0(): Option[JArray] = JsonUtil.asArray0(j)
+    def asArrayValues0(): Option[List[JValue]] = JsonUtil.asArrayValues0(j)
+    def asDouble0(): Option[Double] = JsonUtil.asDouble0(j)
+    def asBigDecimal0(): Option[BigDecimal] = JsonUtil.asBigDecimal0(j)
+    def asBigInt0(): Option[BigInt] = JsonUtil.asBigInt0(j)
+    def asLong0(): Option[Long] = JsonUtil.asLong0(j)
+    def asNumeric0(): Option[JValue] = JsonUtil.asNumeric0(j)
+    def asBoolean0(): Option[Boolean] = JsonUtil.asBoolean0(j)
+    def asString0(): Option[String] = JsonUtil.asString0(j)
 
-    def getDouble(route: Seq[String])
-    : Either[String, Double] = getJValue0(route:_*).toDouble()
+    def asObject(): Either[String, JObject] = JsonUtil.asObject(j)
+    def asObjectValues(): Either[String, List[(String, JValue)]] = JsonUtil.asObjectValues(j)
+    def asArray(): Either[String, JArray] = JsonUtil.asArray(j)
+    def asArrayValues() : Either[String, List[JValue]] = JsonUtil.asArrayValues(j)
+    def asDouble() : Either[String, Double] = JsonUtil.asDouble(j)
+    def asBigDecimal() : Either[String, BigDecimal] = JsonUtil.asBigDecimal(j)
+    def asBigInt() : Either[String, BigInt] = JsonUtil.asBigInt(j)
+    def asLong() : Either[String, Long] = JsonUtil.asLong(j)
+    def asNumeric() : Either[String, JValue] = JsonUtil.asNumeric(j)
+    def asBoolean() : Either[String, Boolean] = JsonUtil.asBoolean(j)
+    def asString() : Either[String, String] = JsonUtil.asString(j)
 
-    def getBigDecimal(route: Seq[String])
-    : Either[String, BigDecimal] = getJValue0(route:_*).toBigDecimal()
+    //////////////////////////////////////////////////////////////////
+    def isNothing(): Boolean = JsonUtil.isNothing(j)
+    def notNothing(): Boolean = !isNothing()
 
-    def toLong()
-    : Either[String, Long] = JsonUtil.toLong(j)
-
-    def toBigInt()
-    : Either[String, BigInt] = JsonUtil.toBigInt(j)
-
-    def toDouble()
-    : Either[String, Double] = JsonUtil.toDouble(j)
-
-    def toBigDecimal()
-    : Either[String, BigDecimal] = JsonUtil.toBigDecimal(j)
-
-    def getDouble()
-    : Either[String, Double] = JsonUtil.getDouble(j)
-
-    def getBigDecimal()
-    : Either[String, BigDecimal] = JsonUtil.getBigDecimal(j)
-
-    def getBigInt()
-    : Either[String, BigInt] = JsonUtil.getBigInt(j)
-
-    def getBoolean()
-    : Either[String, Boolean] = JsonUtil.getBoolean(j)
-
-    def getString()
-    : Either[String, String] = JsonUtil.getString(j)
-
-    def getNumeric()
-    : Either[String, JValue] = JsonUtil.getNumeric(j)
+    def toOption0 = if(isNothing()) None else Some(j)
   }
 
 }

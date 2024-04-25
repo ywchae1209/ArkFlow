@@ -316,7 +316,7 @@ object FormatObject {
   def apply(jv: JObject): Either[SyntaxError, FormatObject] = {
 
     val (err, syntax) = (jv \ objectSyntaxKey)    // todo :: need to ba array ?
-      .getString()
+      .asString()
       .toOption
       .map{ s =>
         val r = SyntaxObject(s)

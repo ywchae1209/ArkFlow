@@ -1,13 +1,14 @@
-package validator.jsonpath.rule
+package validator.jsonConverter.syntaxJsonpath.rule
 
 import org.json4s.JsonAST.JBool
 import org.json4s.{JArray, JDecimal, JDouble, JInt, JLong, JNothing, JNull, JObject, JString, JValue}
-import validator.jsonpath.rule.JPathParser.compile
+import JsonPathParser.compile
 import validator.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
 
+import scala.io.Source.fromResource
 import scala.util.matching.Regex
 
-object JPathAST {
+object JsonPathAST {
 
   ////////////////////////////////////////////////////////////////////////////////
   // AST
@@ -18,40 +19,35 @@ object JPathAST {
 
   sealed trait JPath extends Token
   {
-    def query(root: JValue)(jv: JValue): LazyList[JValue] = {
+    def query(root: JValue)(jv: JValue): LazyList[JValue] = this match {
+      case position: Position => position match {
+        case Root    => LazyList(root)
+        case Current => LazyList(jv)
+      }
 
-      val ret = this match {
-        case position: Position => position match {
-          case Root    => root.asList().to(LazyList)
-          case Current => LazyList(jv)
-        }
+      case selector: FieldSelector => selector match {
+        case Field(name)          => jv \~ name
+        case Fields(names)        => jv \~ (names: _*)
+        case AllFields            => jv.\~~
+        case RecursiveField(name) => jv \\~ name
+        case RecursiveAll         => jv.\\~~    // todo :: need some consideration.
+      }
 
-        case selector: FieldSelector => selector match {
-          case Field(name)          => jv \~ name
-          case Fields(names)        => jv \~ (names: _*)
-          case AllFields            => jv.\~~
-          case RecursiveField(name) => jv \\~ name
-          case RecursiveAll         => jv.\\~~    // todo :: need some consideration.
-        }
-
-        case selector: ArraySelector =>
-          selector match {
+      case selector: ArraySelector =>
+        selector match {
           case Slice(start, end, step)=> jv.slice(start, end, step)
           case Random(index)          => jv.random(index)
           case AllItems               => jv.\~~
         }
 
-        case predicate: PredicateSelector =>
-          jv match {
-            case JArray(l)  => l.filter( predicate.test(root)).to(LazyList)
-            case JObject(l) => l.filter( f => predicate.test(root)(f._2)).map(_._2).to(LazyList)
-            case _          => LazyList.empty
-          }
+      case predicate: PredicateSelector =>
+        jv match {
+          case JArray(l)  => l.filter( predicate.test(root)).to(LazyList)
+          case JObject(l) => l.filter( f => predicate.test(root)(f._2)).map(_._2).to(LazyList)
+          case _          => LazyList.empty
+        }
 
-        case RecursiveFilter(filter) => jv.\\~~.filter(filter.test(root))
-      }
-
-      ret
+      case RecursiveFilter(filter) => jv.\\~~.filter(filter.test(root))
     }
   }
 
@@ -163,6 +159,8 @@ object JPathAST {
           case BasePredicate(filter) => filter.test(root)(jv)
         }
 
+      if(!ret)
+        println( s"Predicate result is false : $this : ${jv.pretty}")
       ret
     }
 
@@ -176,7 +174,6 @@ object JPathAST {
   }
 
   final case class MatchRegex(q: Query, regex: String, reg: Regex) extends PredicateSelector
-
   final case class Contains(q: Query) extends PredicateSelector
   final case class Compare( lhs: FilterValue, op: Comparator, rhs: FilterValue) extends PredicateSelector
   final case class When(lhs: PredicateSelector, op: BinaryBoolOp, rhs: PredicateSelector) extends PredicateSelector
@@ -230,16 +227,11 @@ object JPathAST {
       ret
     }
 
-    def apply(l: List[JValue], r: List[JValue]) = {
-
-      val ret = (l.length, r.length) match {
-        case (1, n) if n > 0 => r.exists( compare(l.head, _))
-        case (n, 1) if n > 0 => l.exists( compare(_, r.head))
-        case (n, m) => println( s"not allowed comparison : $n X $m")
-          false
-      }
-
-      ret
+    def apply(l: List[JValue], r: List[JValue]) = (l.length, r.length) match {
+      case (1, n) if n > 0 => r.exists( compare(l.head, _))
+      case (n, 1) if n > 0 => l.exists( compare(_, r.head))
+      case (n, m) => println( s"not allowed comparison : $n X $m")
+        false
     }
 
     override def show: String = this match {
@@ -273,20 +265,13 @@ object JPathAST {
   final case object And extends BinaryBoolOp
   final case object Or extends BinaryBoolOp
 
-  object JPathASTFeature {
-    // todo :::
-
-    def query(path: JPath, jv: JValue) = {
-
-    }
-  }
 }
 
 object SpecJsonPathParser extends App{
 
   def show(j: JValue)(s: String) = {
 
-    val p: Either[String, JPathAST.Query] = compile(s)
+    val p: Either[String, JsonPathAST.Query] = compile(s)
 
     println("Expr: " + s)
     p.foreach{ s =>
@@ -307,8 +292,11 @@ object SpecJsonPathParser extends App{
   }
 
   val ss = List(
+    "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)].PRS_INFO[0:]",
+//    "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)]['TRT_INFO', 'ISR_INFO', 'RCPT_HEADER', 'FEE_DETAIL','PRS_INFO']",
+//    "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)]['TRT_INFO'].CUSTOM4",
 //    ".'store'.book[*].'author'",
-//    "$[]",
+//    "$[?(@ ]",
 //    "$..[?(.price)]",
 //    "$.store.book[?(@.price)]",
 //    "$.store..price",
@@ -384,8 +372,16 @@ object SpecJsonPathParser extends App{
       |}
       |""".stripMargin
 
+  val json0 = input0.toJValue
 
-  val json = input0.toJValue
+  val path = "lemon\\from.json"
+  val jstr = fromResource(path).mkString
+  val json = jstr.toJValue
+
+//  println(json.pretty)
+
+
+
   ss.foreach(show(json))
 
 

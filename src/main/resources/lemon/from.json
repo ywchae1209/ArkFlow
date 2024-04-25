@@ -60,9 +60,9 @@
       "PAT_AMT": "5000",
       "PAID_AMT": "0",
       "DISCNT_AMT": "0",
-      "DISCNT_DESC": "",
+      "DISCNT_DESC": "==",
       "PAID_NOT_AMT": "0",
-      "PAID_NOT_AMT_DESC": "",
+      "PAID_NOT_AMT_DESC": "==",
       "AMT_TO_PAY": "5000",
       "PAY_AMT": "5000",
       "OWN_AMT": "5000",
@@ -71,7 +71,7 @@
       "SPC_AMT": "0",
       "SPC_EX_AMT": "0",
       "UP_LIMIT_AMT": "0",
-      "DRG_NO": ""
+      "DRG_NO": "=="
     },
     "RCPT_DETAIL": [
       {
@@ -110,7 +110,7 @@
         "TRT_YMD": "2022-07-18",
         "TRT_CD": "C01",
         "TRT_NM": "진찰료",
-        "SUGA_CD": "",
+        "SUGA_CD": "==",
         "EDI_CD": "AA154",
         "ITEM_NM": "초진진찰료",
         "UNIT_PRICE": "16970",
@@ -138,8 +138,8 @@
         "HOSP_NM": "테스트의원",
         "HOSP_CD": "16001478",
         "HOSP_TEL": "02-310-9160",
-        "HOSP_FAX": "",
-        "HOSP_EMAIL": "",
+        "HOSP_FAX": "==",
+        "HOSP_EMAIL": "==",
         "DIAG_CD": "J00",
         "DR_NM": "김병희",
         "DR_NO": "106001",
@@ -148,7 +148,7 @@
         "DOSE_AMT_ONCE": "1.0000",
         "DOSE_CNT_PER_DAY": "3",
         "DAYS_OF_DOSE": "1",
-        "METHOD": ""
+        "METHOD": "=="
       }
     ]
   }

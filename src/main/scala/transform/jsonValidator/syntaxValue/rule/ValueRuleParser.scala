@@ -1,10 +1,10 @@
-package validator.jsonValidator.syntaxValue.rule
+package transform.jsonValidator.syntaxValue.rule
 
 import fastparse.NoWhitespace._
 import fastparse._
-import validator.jsonValidator.InvalidSyntaxValueRule
-import validator.jsonValidator.syntaxValue.rule.ValueRuleAst._
-import validator.utils.StringUtil.parseWith
+import transform.jsonValidator.InvalidSyntaxValueRule
+import transform.jsonValidator.syntaxValue.rule.ValueRuleAst._
+import transform.utils.StringUtil.parseWith
 
 /**
  * SyntaxValue Parser

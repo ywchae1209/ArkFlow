@@ -1,11 +1,11 @@
-package validator
+package transform
 
 import org.json4s.jackson.Serialization.writePretty
 import org.json4s.{DefaultFormats, JArray, JObject, JValue}
-import validator.jsonValidator.{Fails, FormatJson, SyntaxError}
-import validator.utils.JsonUtil.StringWithJsonPower
-import validator.utils.StringUtil
-import validator.utils.StringUtil.show
+import transform.jsonValidator.{Fails, FormatJson, SyntaxError}
+import transform.utils.JsonUtil.StringWithJsonPower
+import transform.utils.StringUtil
+import transform.utils.StringUtil.show
 
 import scala.collection.immutable.HashMap
 

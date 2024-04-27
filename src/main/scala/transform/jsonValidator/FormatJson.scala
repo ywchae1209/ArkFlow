@@ -1,11 +1,12 @@
-package validator.jsonValidator
+package transform.jsonValidator
 
 import org.json4s.{JArray, JField, JNull, JObject, JString, JValue}
-import validator.jsonValidator.FormatObject.{objectSyntaxKey, optionDefault}
-import validator.jsonValidator.syntaxObject.SyntaxObject
-import validator.jsonValidator.syntaxValue.SyntaxValue
-import validator.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
-import validator.utils.StringUtil.{show, wordy}
+import transform.jsonValidator.FormatObject.{objectSyntaxKey, optionDefault}
+import transform.jsonValidator.syntaxObject.SyntaxObject
+import transform.jsonValidator.syntaxValue.SyntaxValue
+import transform.traits.ToJson
+import transform.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
+import transform.utils.StringUtil.{show, wordy}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -203,9 +204,7 @@ object FormatArray {
   }
 
 }
-
 ////////////////////////////////////////////////////////////////////////////////
-
 /**
  * @param fields : JObject's Field-condition must confirm
  * @param syntax : inter-field relationship for JObject must confirm.
@@ -308,11 +307,6 @@ object FormatObject {
       k -> f
   }
 
-  // todo ::: multiple SyntaxObjectRule
-  def makeSyntaxObjectRule(jv: JValue) = {
-
-  }
-
   def apply(jv: JObject): Either[SyntaxError, FormatObject] = {
 
     val (err, syntax) = (jv \ objectSyntaxKey)    // todo :: need to ba array ?
@@ -357,5 +351,5 @@ case class FormatOptional( format: FormatJson) extends FormatJson {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// syntax for object
+// syntax for array
 trait SyntaxArray

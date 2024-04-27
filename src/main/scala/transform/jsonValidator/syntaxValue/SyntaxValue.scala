@@ -1,10 +1,10 @@
-package validator.jsonValidator.syntaxValue
+package transform.jsonValidator.syntaxValue
 
 import org.json4s.JValue
-import validator.jsonValidator.syntaxValue.rule.PredicateMaker.UserFunctionTable
-import validator.jsonValidator.syntaxValue.rule.ValueRuleAst.ValueCondition
-import validator.jsonValidator.syntaxValue.rule.ValueRuleParser
-import validator.jsonValidator.{EvaluationError, SyntaxError}
+import transform.jsonValidator.syntaxValue.rule.PredicateMaker.UserFunctionTable
+import transform.jsonValidator.syntaxValue.rule.ValueRuleAst.ValueCondition
+import transform.jsonValidator.syntaxValue.rule.ValueRuleParser
+import transform.jsonValidator.{EvaluationError, SyntaxError}
 
 case class SyntaxValue(expr: ValueCondition) {
 

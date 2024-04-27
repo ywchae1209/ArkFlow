@@ -1,7 +1,7 @@
-package validator
+package transform
 
 import org.json4s.JValue
-import validator.jsonValidator.Fails
+import transform.jsonValidator.Fails
 
 import scala.io.Source.fromResource
 
@@ -162,6 +162,30 @@ object SpecJsonValidator extends App {
 ]
 """
 
+  val rule0 =
+    """
+      |[
+      |{
+      |  "_?_:TRT_KEY": "_regex('1234-.*')",
+      |  "YYK_ID": "_longerThan(3)",
+      |  "PAT_ID": "_digit",
+      |  "INSURE_TYPE": "_oneOf(건강보험,요향보험)",
+      |  "INSURE_TYPE_CD": "_digitOr(갑을병-)",
+      |  "DEPT_CD": "between(999, 9999)",
+      |  "DEPT_NM": "_oneOf(원무과,총무과) || _regex('우리병원.*실')",
+      |  "DR_NM": "_longerThan(2) && _shorterThan(7)",
+      |  "RCPT_GB": "_oneOf(입원,외래,응급,퇴원,중간)",
+      |  "TRT_YMD": "_digitOr(-)",
+      |  "$$$$" : "${CUSTOM1} > ${CUSTOM1}",
+      |  "TRT_S_YMD": "_date(${yyyy}-${mm}-${dd}) || _digitOr(-)",
+      |  "TRT_E_YMD": "_any || _between(0, 1000)",
+      |  "DR_CD": "_any",
+      |  "TRT_AMT": "lt(1000) & & gt(100)",
+      |  "CUSTOM1": "_length(8)"
+      |}
+      |]
+      |""".stripMargin
+
 
   val path = "lemon\\from.json"
   val jstr = fromResource(path).mkString
@@ -171,13 +195,14 @@ object SpecJsonValidator extends App {
   val id = "hiwebnet"
 
   // initialize JsonValidate with id, rule
-  val jv: JsonValidator = JsonValidator(id, ruleString)
+  val jv: JsonValidator = JsonValidator(id, rule0)
+  jv.showRules(id)
 
   // evaluate Json with id's rule
-  val result: ValidateResult = jv.evaluate(id, jstr )
+//  val result: ValidateResult = jv.evaluate(id, jstr )
 
   // show result
-  result.show()
+//  result.show()
 
 }
 

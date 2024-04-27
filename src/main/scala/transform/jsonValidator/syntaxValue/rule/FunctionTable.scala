@@ -1,17 +1,16 @@
-package validator.jsonValidator.syntaxValue.rule
+package transform.jsonValidator.syntaxValue.rule
 
 import org.json4s.{JDecimal, JDouble, JInt, JLong, JValue}
-import validator.jsonValidator.EvalError.StringWithSyntaxPower
-import validator.jsonValidator.syntaxValue.rule.Predicate.JPredicate
-import validator.jsonValidator._
-import validator.utils.JsonUtil._
-import validator.utils.StringUtil
-import validator.utils.StringUtil.{show, wordy}
+import transform.jsonValidator.EvalError.StringWithSyntaxPower
+import transform.jsonValidator.syntaxValue.rule.Predicate.JPredicate
+import transform.jsonValidator._
+import transform.utils.JsonUtil._
+import transform.utils.StringUtil
+import transform.utils.StringUtil.{show, wordy}
 
 import scala.collection.immutable.{HashMap, HashSet}
 import scala.math.BigDecimal.long2bigDecimal
 import scala.math.Numeric.Implicits.infixNumericOps
-
 
 case class Predicate (check: Either[SyntaxErrorValue, JPredicate ],
                       name: String,
@@ -284,6 +283,5 @@ object Calc {
   def lt[T: Numeric](bottom: T)(jv: JValue): Either[EvalError, Boolean] = gte(bottom)(jv).map(b => !b)
 
   def lte[T: Numeric](bottom: T)(jv: JValue): Either[EvalError, Boolean] = gt(bottom)(jv).map(b => !b)
-
 }
 

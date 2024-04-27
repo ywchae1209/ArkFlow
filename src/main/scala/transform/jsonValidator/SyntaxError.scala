@@ -1,14 +1,12 @@
-package validator.jsonValidator
+package transform.jsonValidator
 
-import org.json4s.{JArray, JString, JValue}
 import org.json4s.JsonAST.JObject
-
-import scala.collection.mutable.ListBuffer
+import org.json4s.{JArray, JString, JValue}
+import transform.traits.ToJson
 
 ////////////////////////////////////////////////////////////////////////////////
 // SyntaxError : check syntax for field Value
 ////////////////////////////////////////////////////////////////////////////////
-
 sealed trait SyntaxError extends ToJson
 
 ////////////////////////////////////////////////////////////////////////////////

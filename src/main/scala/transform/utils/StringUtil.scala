@@ -1,4 +1,4 @@
-package validator.utils
+package transform.utils
 
 import fastparse.{P, Parsed, parse}
 
@@ -115,7 +115,7 @@ object StringUtil {
     val sp = List.fill(s.length)("-").mkString
     val p1 = List.fill(p)("").mkString("", " ", "^^^")
 
-    show(s"$msg\n$sp\n$s\n$sp\n$p1")
+//    show(s"$msg\n$sp\n$s\n$sp\n$p1")
 
     msg
   }
@@ -127,7 +127,7 @@ object StringUtil {
         Left( toFailMessage( s, p, extra))
       case _ =>
         val msg = s"Invalid expression : $s"
-        show(msg)
+//        show(msg)
         Left(msg)
     }
 

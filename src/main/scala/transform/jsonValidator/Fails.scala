@@ -1,21 +1,9 @@
-package validator.jsonValidator
+package transform.jsonValidator
 
 import org.json4s.JsonAST.JObject
-import org.json4s.jackson.Serialization.writePretty
-import org.json4s.{DefaultFormats, JArray, JString, JValue}
-import validator.utils.StringUtil
-
-trait ToJson{
-
-  implicit val formats: DefaultFormats.type = DefaultFormats
-
-  def toJson: JValue
-  def pretty = writePretty(toJson)
-  def show(header: String= ""): String =  {
-    StringUtil.show(header + "\n" + writePretty(toJson))
-  }
-}
-
+import org.json4s.{JArray, JString, JValue}
+import transform.traits.ToJson
+import transform.utils.StringUtil
 
 ////////////////////////////////////////////////////////////////////////////////
 sealed trait EvaluationError extends ToJson
@@ -29,7 +17,7 @@ case class EvalError(e: String) extends EvaluationError {
 }
 
 case class EvalSyntaxErr(syntaxError: SyntaxError ) extends EvaluationError {
-  override def toJson: JValue = syntaxError.toJson    // todo :: check
+  override def toJson: JValue = syntaxError.toJson
 }
 
 object EvalSyntaxErr {

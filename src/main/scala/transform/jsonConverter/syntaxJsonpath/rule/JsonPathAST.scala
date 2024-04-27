@@ -1,9 +1,9 @@
-package validator.jsonConverter.syntaxJsonpath.rule
+package transform.jsonConverter.syntaxJsonpath.rule
 
 import org.json4s.JsonAST.JBool
 import org.json4s.{JArray, JDecimal, JDouble, JInt, JLong, JNothing, JNull, JObject, JString, JValue}
 import JsonPathParser.compile
-import validator.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
+import transform.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
 
 import scala.io.Source.fromResource
 import scala.util.matching.Regex
@@ -14,7 +14,7 @@ object JsonPathAST {
   // AST
   ////////////////////////////////////////////////////////////////////////////////
   sealed trait Token {
-    def show: String
+    def pretty: String
   }
 
   sealed trait JPath extends Token
@@ -52,7 +52,7 @@ object JsonPathAST {
   }
 
   sealed trait Position extends JPath {
-    override def show: String = this match {
+    override def pretty: String = this match {
       case Root => "$"
       case Current => "@"
     }
@@ -61,7 +61,7 @@ object JsonPathAST {
   final case object Current extends Position
 
   sealed trait FieldSelector extends JPath {
-    override def show: String = this match {
+    override def pretty: String = this match {
       case Field(name)          => "." + name
       case Fields(names)        => names.mkString("[",",","]")
       case AllFields            => ".*"
@@ -85,7 +85,7 @@ object JsonPathAST {
   sealed trait ArraySelector extends JPath {
     private def m[T](t: Option[T]) = t.map(_.toString).getOrElse("")
 
-    override def show: String = this match {
+    override def pretty: String = this match {
       case Slice(s, e, t) => s"[${m(s)}:${m(e)}:${t}]"
       case Random(index)  => index.mkString("[", ",", "]")
       case AllItems            => "[*]"
@@ -112,8 +112,8 @@ object JsonPathAST {
       case Literal(jv) => LazyList(jv)
     }
 
-    override def show: String = this match {
-      case Query(p, route) => s"${p.show}" + route.map(_.show).mkString
+    override def pretty: String = this match {
+      case Query(p, route) => s"${p.pretty}" + route.map(_.pretty).mkString
       case Literal(jv)     => jv.values.toString
     }
   }
@@ -164,12 +164,12 @@ object JsonPathAST {
       ret
     }
 
-    override def show: String = this match {
-      case MatchRegex(q, regex, _)   => s"${q.show} =~ $regex"
-      case Contains(q)            => q.show
-      case Compare(lhs, op, rhs)  => s"(${lhs.show} ${op.show} ${rhs.show})"
-      case When(lhs, op, rhs)     => s"(${lhs.show} ${op.show} ${rhs.show})"
-      case BasePredicate(filter)  => s"[?( ${filter.show} )]"
+    override def pretty: String = this match {
+      case MatchRegex(q, regex, _)   => s"${q.pretty} =~ $regex"
+      case Contains(q)            => q.pretty
+      case Compare(lhs, op, rhs)  => s"(${lhs.pretty} ${op.pretty} ${rhs.pretty})"
+      case When(lhs, op, rhs)     => s"(${lhs.pretty} ${op.pretty} ${rhs.pretty})"
+      case BasePredicate(filter)  => s"[?( ${filter.pretty} )]"
     }
   }
 
@@ -180,7 +180,7 @@ object JsonPathAST {
   final case class BasePredicate(filter: PredicateSelector) extends PredicateSelector
 
   case class RecursiveFilter(filter: PredicateSelector) extends JPath {
-    override def show: String = s"..*${filter.show}"
+    override def pretty: String = s"..*${filter.pretty}"
   }
 
   //////////////////////////////////////////////////
@@ -234,7 +234,7 @@ object JsonPathAST {
         false
     }
 
-    override def show: String = this match {
+    override def pretty: String = this match {
       case Eq => "=="
       case Neq => "!="
       case Gt => ">"
@@ -257,7 +257,7 @@ object JsonPathAST {
       case Or  => l || r
     }
 
-    override def show: String = this match {
+    override def pretty: String = this match {
       case And => "&&"
       case Or  => "||"
     }
@@ -276,7 +276,7 @@ object SpecJsonPathParser extends App{
     println("Expr: " + s)
     p.foreach{ s =>
       println("AST:  " + s)
-      println("Show: " + s.show)
+      println("Show: " + s.pretty)
     }
     println("=============================")
 

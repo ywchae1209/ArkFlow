@@ -1,10 +1,10 @@
-package validator.jsonValidator.syntaxValue.rule
+package transform.jsonValidator.syntaxValue.rule
 
 import org.json4s.{JString, JValue}
-import validator.jsonValidator._
-import validator.jsonValidator.syntaxValue.rule.PredicateMaker.UserFunctionTable
-import validator.jsonValidator.syntaxValue.rule.ValueRuleAst.FunctionOperator.eval
-import validator.utils.StringUtil.{show, wordy}
+import transform.jsonValidator._
+import transform.jsonValidator.syntaxValue.rule.PredicateMaker.UserFunctionTable
+import transform.jsonValidator.syntaxValue.rule.ValueRuleAst.FunctionOperator.eval
+import transform.utils.StringUtil.{show, wordy}
 
 object ValueRuleAst {
 
@@ -84,6 +84,9 @@ object ValueRuleAst {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// unit test
+////////////////////////////////////////////////////////////////////////////////
 object SpecValueRuleAST extends App {
 
   val s = "f(1) || (_myfuction(abc) && my() || this()) || " +

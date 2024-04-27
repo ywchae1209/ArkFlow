@@ -1,9 +1,9 @@
-package validator.jsonConverter.syntaxJsonpath.rule
+package transform.jsonConverter.syntaxJsonpath.rule
 
 import fastparse.NoWhitespace._
 import fastparse._
 import JsonPathAST._
-import validator.utils.StringUtil.parseWith
+import transform.utils.StringUtil.parseWith
 
 
 /* ref)
@@ -12,7 +12,7 @@ import validator.utils.StringUtil.parseWith
  */
 object JsonPathParser {
 
-  def compile(s: String) = parseWith(jsonPath(_))(s)
+  def compile(s: String): Either[String, Query] = parseWith(jsonPath(_))(s)
 
   //////////////////////////////////////////////////
   private def sp[$: P]= P(CharsWhileIn(" \r\n\t").rep(max = 80))

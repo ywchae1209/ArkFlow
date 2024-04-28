@@ -6,9 +6,10 @@
 3. Extract and convert a json to other json format with give convert-rul
 
 [ Based on ]   
-Scala 2.1x  ( ove)
-fast-parser ( parser-combinator library.)
-json4s (json library)
+* Scala 2.1x ( language )
+* fast-parser ( parser-combinator library.)
+* json4s (json library)
+* no other dependency
 
 Business를 지원하는 거의 모든 프로젝트에는 구조화된 데이터 처리가 포함되어 있고 
 그 처리과정에는 데이터의 검증(구조/형식/내용)과 변환이 필수적으로 수반된다.
@@ -259,7 +260,7 @@ case class FormatObject(fields: Map[String, FormatJson], syntax: Option[(SyntaxO
 아래 문서 참고
 * convert.docx
 * jsonpath.docx
-* 
+
 -----------------------
 ## for Java Developer
 

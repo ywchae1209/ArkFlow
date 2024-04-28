@@ -213,9 +213,9 @@ case class JArray(arr: Seq[JValue])
 
 [ 구조검증 Rule class]
 ```scala
-case FormatArray(format: FormatJson, syntaxArray: Option[SyntaxArray]) 
-case FormatObject(fields: Map[String, FormatJson], syntax: Option[(SyntaxObject, Boolean)]) 
-case FormatOptional(format: FormatJson)
+case class FormatArray(format: FormatJson, syntaxArray: Option[SyntaxArray]) 
+case class FormatObject(fields: Map[String, FormatJson], syntax: Option[(SyntaxObject, Boolean)]) 
+case class FormatOptional(format: FormatJson)
 
 ```
 
@@ -265,4 +265,5 @@ case class FormatObject(fields: Map[String, FormatJson], syntax: Option[(SyntaxO
 
 별도 문서 참고.
 
-To-be-updated..
+* convert.docx
+* jsonpath.docx

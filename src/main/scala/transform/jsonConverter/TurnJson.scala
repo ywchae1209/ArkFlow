@@ -1,14 +1,12 @@
 package transform.jsonConverter
 
 import org.json4s.{JArray, JObject, JSet, JString, JValue}
-import Fails._
+import transform.common.ToJson
+import transform.jsonConverter.Fails._
 import transform.jsonConverter.TurnJson._
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathAST.Query
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathParser
-import transform.common.ToJson
-import transform.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
-
-import scala.io.Source.fromResource
+import transform.utils.JsonUtil.JValueWithPower
 
 ////////////////////////////////////////////////////////////////////////////////
 trait Convert {

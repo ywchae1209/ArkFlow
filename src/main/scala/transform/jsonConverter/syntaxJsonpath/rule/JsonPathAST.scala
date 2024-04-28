@@ -2,10 +2,8 @@ package transform.jsonConverter.syntaxJsonpath.rule
 
 import org.json4s.JsonAST.JBool
 import org.json4s.{JArray, JDecimal, JDouble, JInt, JLong, JNothing, JNull, JObject, JString, JValue}
-import JsonPathParser.compile
-import transform.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
+import transform.utils.JsonUtil.JValueWithPower
 
-import scala.io.Source.fromResource
 import scala.util.matching.Regex
 
 object JsonPathAST {

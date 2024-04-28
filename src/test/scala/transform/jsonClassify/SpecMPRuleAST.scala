@@ -18,4 +18,7 @@ object SpecMPRuleAST extends App {
   val s1 = "!('a' & !( 'b' | !'c')) | ((!(  !( 'a' & 'b' ) & 'c') | 'd' ) & 'e') "
   val r = Rule(1000, s)
 
+  println(r)
+
+
 }

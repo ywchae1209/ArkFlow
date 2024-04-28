@@ -263,7 +263,86 @@ case class FormatObject(fields: Map[String, FormatJson], syntax: Option[(SyntaxO
 -----------------------
 ## Convert JSON
 
-별도 문서 참고.
-
+아래 문서 참고
 * convert.docx
 * jsonpath.docx
+* 
+-----------------------
+## for Java Developer
+
+you can find facade classes in below package.
+
+```scala
+import transform.java
+```
+
+
+```java
+
+// classify 
+
+import transform.java.ClassifyResult;
+import transform.java.JsonClassifier;
+
+Map<Integer, String> mps = Map(1, "'this'~'is'~'test'");
+
+JsonClassifier jc = JsonClassifier.apply(mps);
+
+var a0 = jc.isSuccess();
+var a1 = jc.isFail();
+var a2 = jc.getFailReason();
+var a3 = jc.show();
+
+String someString = "target-string to find which pattern is matched to";
+ClassifyResult ret = jc.search(someString);
+
+var b0 = ret.isSuccess();
+var b1 = ret.isFail();
+var b2 = ret.getFailReason();
+var b3 = ret.show();
+
+```
+
+```java
+// Validate
+
+import transform.java.JsonValidator;
+import transform.java.ValidateResult;
+
+JsonValidator jv = JsonValidator.apply("my-validate-rule-in-json-format");
+
+var a0 = jv.isSuccess();
+var a1 = jv.isFail();
+var a2 = jv.getFailReason();
+var a3 = jv.show();
+
+ValidateResult ret = jv.validate("target-json");
+
+var b0 = ret.isSuccess();
+var b1 = ret.isFail();
+var b2 = ret.getFailReason();
+var b3 = ret.show();
+
+```
+
+```java
+
+import transform.java.ClassifyResult;
+import transform.java.JsonClassifier;
+import transform.java.JsonConverter;
+
+JsonConverter jc = JsonConverter.apply("my-convert-rule-in-json-format");
+
+var a0 = jc.isSuccess();
+var a1 = jc.isFail();
+var a2 = jc.getFailReason();
+var a3 = jc.show();
+
+ConvertResult ret = jc.convert("target-json");
+
+var b0 = ret.isSuccess();
+var b1 = ret.isFail();
+var b2 = ret.getFailReason();
+var b3 = ret.show();
+
+```

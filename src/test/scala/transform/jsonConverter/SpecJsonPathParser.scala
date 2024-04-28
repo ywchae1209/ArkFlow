@@ -116,13 +116,14 @@ object SpecJsonPathParser extends App {
   val json0 = input0.toJValue
 
   val path = "lemon\\from.json"
+
   val jstr = fromResource(path).mkString
   val json = jstr.toJValue
 
   //  println(json.pretty)
 
 
-
+  println(s"fromResource: ${json.pretty}")
   ss.foreach(show(json))
 
 

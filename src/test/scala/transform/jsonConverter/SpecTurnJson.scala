@@ -21,6 +21,7 @@ object SpecTurnJson extends App {
   val path0 = "lemon\\from.json"
   val jstr0 = fromResource(path0).mkString
   val jv0 = jstr0.toJValue
+  println(s"fromResource ${jv0.pretty}")
   //////////////////////////////////////////////////////////////////////////////
   val tj = ret.toOption.get
   val ret0 = tj.convert(jv0, jv0)

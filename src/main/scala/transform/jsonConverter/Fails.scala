@@ -32,6 +32,7 @@ object Fails {
   case class CODs(s: Seq[CauseOfDenial]) extends CauseOfDenial
   case class CODo(s: Seq[(String, CauseOfDenial)]) extends CauseOfDenial
 
+  val not_valid_json = RSE("not valid json")
   // some utils
   ////////////////////////////////////////////////////////////////////////////////
   def RSE2s_lefts[A]( es: Either[(String, RuleSyntaxError), A]* ) =

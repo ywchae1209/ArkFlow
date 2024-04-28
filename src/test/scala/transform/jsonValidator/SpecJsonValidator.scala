@@ -1,5 +1,6 @@
 package transform.jsonValidator
 
+
 import transform.java.JsonValidator
 
 import scala.io.Source.fromResource
@@ -191,14 +192,11 @@ object SpecJsonValidator extends App {
 
   ////////////////////////////////////////////////////////////////////////////////
 
-  val id = "hiwebnet"
-
   // initialize JsonValidate with id, rule
-  val jv: JsonValidator = JsonValidator(id, rule0)
-  jv.showRules(id)
+  val jv = JsonValidator(rule0)
 
   // evaluate Json with id's rule
-//  val result: ValidateResult = jv.evaluate(id, jstr )
+  val result = jv.validate(jstr )
 
   // show result
 //  result.show()

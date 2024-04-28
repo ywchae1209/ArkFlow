@@ -18,6 +18,9 @@ case class Occurrence( keyword: String, loc: Seq[Int]) {
  */
 case class MultiPattern(rules: Map[Int, RuleRoot], dictionary: Trie[Term]) {
 
+
+  override def toString() = rules.map( kv => s"${kv._1}:${kv._2.string}").mkString("[",",","]")
+
   def search(s: String): Iterable[(Int, String, Seq[Occurrence])] =  {
 
     def matched(ms: Seq[(Term, Location)]) = {

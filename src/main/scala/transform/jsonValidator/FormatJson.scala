@@ -104,15 +104,6 @@ object FormatJson {
   }
 }
 
-val z: FormatJson = ???
-z match {
-  case FormatValue(syntax: Seq[SyntaxValue]) => ???
-  case FormatArray(format: FormatJson, syntaxArray: Option[SyntaxArray]) => ???
-  case FormatObject(fields: Map[String, FormatJson], syntax: Option[(SyntaxObject, Boolean)]) => ???
-  case FormatOptional(format: FormatJson) => ???
-}
-
-
 /**
  * Json-value inspection rule holder .
  * @param syntax : List of [[SyntaxValue]]. Target json must satisfy at least one of these syntax.

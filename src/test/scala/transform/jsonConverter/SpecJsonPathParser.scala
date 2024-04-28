@@ -3,7 +3,7 @@ package transform.jsonConverter
 import org.json4s.JValue
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathAST
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathParser.compile
-import transform.utils.JsonUtil.JValueWithPower
+import transform.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
 
 import scala.io.Source.fromResource
 

@@ -13,7 +13,7 @@ object MPRuleParser {
 
     parse(ruleString, expression(_)) match {
 
-      case Parsed.Success(rule, _) => Some(rule)
+      case Parsed.Success(rule: Rule, _) => Some(rule)
       case Parsed.Failure(_, index, extra) =>
 
         println("========================================================\n" +

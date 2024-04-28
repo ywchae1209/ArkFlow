@@ -1,4 +1,4 @@
-package transform.traits
+package transform.common
 
 import org.json4s.{DefaultFormats, JValue}
 import org.json4s.jackson.Serialization.writePretty

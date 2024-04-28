@@ -4,7 +4,7 @@ import org.json4s.{JArray, JField, JNull, JObject, JString, JValue}
 import transform.jsonValidator.FormatObject.{objectSyntaxKey, optionDefault}
 import transform.jsonValidator.syntaxObject.SyntaxObject
 import transform.jsonValidator.syntaxValue.SyntaxValue
-import transform.traits.ToJson
+import transform.common.ToJson
 import transform.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
 import transform.utils.StringUtil.{show, wordy}
 
@@ -103,6 +103,15 @@ object FormatJson {
     }
   }
 }
+
+val z: FormatJson = ???
+z match {
+  case FormatValue(syntax: Seq[SyntaxValue]) => ???
+  case FormatArray(format: FormatJson, syntaxArray: Option[SyntaxArray]) => ???
+  case FormatObject(fields: Map[String, FormatJson], syntax: Option[(SyntaxObject, Boolean)]) => ???
+  case FormatOptional(format: FormatJson) => ???
+}
+
 
 /**
  * Json-value inspection rule holder .

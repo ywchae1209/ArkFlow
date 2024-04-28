@@ -1,11 +1,10 @@
 package transform.jsonConverter
 
 import org.json4s.{JArray, JObject, JString, JValue}
-import transform.traits.ToJson
+import transform.common.ToJson
 
 object Fails {
 
-  ////////////////////////////////////////////////////////////////////////////////
   // rule-syntax-error
   ////////////////////////////////////////////////////////////////////////////////
   trait RuleSyntaxError extends ToJson {
@@ -20,22 +19,38 @@ object Fails {
   case class RSEs(s: List[RuleSyntaxError]) extends RuleSyntaxError
   case class RSEo(s: List[(String, RuleSyntaxError)]) extends RuleSyntaxError
 
+  // not confirm reason
   ////////////////////////////////////////////////////////////////////////////////
-  // run-time fail
-  ////////////////////////////////////////////////////////////////////////////////
-  sealed trait ConvertError extends ToJson{
+  sealed trait CauseOfDenial extends ToJson {
     def toJson = this match {
-      case CVE(s)     => JString(s)
-      case CVEs(s)    => JArray(s.map(_.toJson).toList)
-      case CVEo(s)    => JObject(s.map(kv => kv._1 -> kv._2.toJson).toList)
+      case COD(s)     => JString(s)
+      case CODs(s)    => JArray(s.map(_.toJson).toList)
+      case CODo(s)    => JObject(s.map(kv => kv._1 -> kv._2.toJson).toList)
     }
   }
-  case class CVE(s: String) extends ConvertError
-  case class CVEs(s: Seq[ConvertError]) extends ConvertError
-  case class CVEo(s: Seq[(String, ConvertError)]) extends ConvertError
+  case class COD(s: String) extends CauseOfDenial
+  case class CODs(s: Seq[CauseOfDenial]) extends CauseOfDenial
+  case class CODo(s: Seq[(String, CauseOfDenial)]) extends CauseOfDenial
 
-  object CVE2 {
-    def CVE20[T](p: String, s: String, l: Seq[T]) = if(l.isEmpty) List(p -> CVE(s)) else Nil
-    def CVE2s(p: String, s: Seq[ConvertError]) = if(s.nonEmpty) List( p -> CVEs(s)) else Nil
-  }
+  // some utils
+  ////////////////////////////////////////////////////////////////////////////////
+  def RSE2s_lefts[A]( es: Either[(String, RuleSyntaxError), A]* ) =
+    es.partitionMap(identity)._1.toList
+
+  ////////////////////////////////////////////////////////////////////////////////
+  def COD2(t: (String, String)): (String, COD)
+  = t._1 -> COD(t._2)
+
+  def COD2s_ifNone[A](o: Option[A])(ifNone: => (String, String)): Seq[(String, COD)]
+  = o.map( _ => Seq.empty).getOrElse(Seq( COD2(ifNone)))
+
+  def COD2s_ifSome[A](o: Option[A])(ifSome: => (String, String)): Seq[(String, COD)]
+  = o.map( _ => Seq(COD2(ifSome))).getOrElse(Seq.empty)
+
+  def COD2s_cond(b: Boolean)(cod2: (String,String)*): Seq[(String, COD)]
+  = if(b) cod2.map(t => t._1 -> COD(t._2)) else Nil
+
+  def COD2s_Nel(p: String, s: Seq[CauseOfDenial]): Seq[(String, CODs)]
+  = if(s.nonEmpty) List( p -> CODs(s)) else Nil
+
 }

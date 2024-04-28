@@ -1,4 +1,4 @@
-package transform
+package transform.java
 
 import org.json4s.jackson.Serialization.writePretty
 import org.json4s.{DefaultFormats, JArray, JObject, JValue}

@@ -2,7 +2,7 @@ package transform.jsonValidator
 
 import org.json4s.JsonAST.JObject
 import org.json4s.{JArray, JString, JValue}
-import transform.traits.ToJson
+import transform.common.ToJson
 
 ////////////////////////////////////////////////////////////////////////////////
 // SyntaxError : check syntax for field Value

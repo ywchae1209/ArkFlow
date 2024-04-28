@@ -3,7 +3,7 @@
   "[$>]": {
     "{::}":                                           "$.TRT_INFO",
     "{=>}": {
-      "addItem4":                                     "@.CUSTOM4_",
+      "addItem4":                                     "@.CUSTOM4",
       "subInsuranceCd": null,
       "addItem5":                                     "@.CUSTOM5",
       "certificateDocId": null,
@@ -16,7 +16,7 @@
       "certificateCd": null,
       "insuranceClaimCd": "11100397-O-20220826-201110858-2022082601451-0102",
       "doctorId": "100036",
-      "insuranceCd":                                  "@....INSURE_TYPE_CD",
+      "insuranceCd":                                  "@.INSURE_TYPE_CD",
       "dgnNm": null,
       "billNo":                                       "$.RCPT_HEADER.RCPT_ID",
       "certificateNm": null,
@@ -36,11 +36,11 @@
       "addItem3":                                     "@.CUSTOM3"
     },
     "receipt": {
-      "{::}":                                        "$...RCPT_HEADER",
+      "{::}":                                        "$.RCPT_HEADER",
       "{=>}": {
         "approvalNo": null,
         "reservationAmt": null,
-        "patientId":                                "@...PAT_ID",
+        "patientId":                                "@.PAT_ID",
         "installmentPeriod": null,
         "endDt":                                    "@.TRT_E_YMD",
         "deptNm":                                   "@.DEPT_NM",
@@ -144,7 +144,7 @@
         "enforceEndTm": null,
         "addItem4": null,
         "addItem5": null,
-        "accumulatedLclsCd":                        "@.TRT_CD_",
+        "accumulatedLclsCd":                        "@.TRT_CD",
         "enforceDt":                                "@.TRT_YMD",
         "patientTotalAmt": 6855,
         "deptNm": null,

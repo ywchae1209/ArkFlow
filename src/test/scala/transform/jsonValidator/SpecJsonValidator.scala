@@ -1,7 +1,6 @@
-package transform
+package transform.jsonValidator
 
-import org.json4s.JValue
-import transform.jsonValidator.Fails
+import transform.java.JsonValidator
 
 import scala.io.Source.fromResource
 

@@ -1,51 +1,32 @@
 package transform.jsonConverter
 
-import org.json4s.{JArray, JNothing, JObject, JSet, JString, JValue}
-import transform.jsonConverter.Fails.CVE2.{CVE20, CVE2s}
-import transform.jsonConverter.Fails._
+import org.json4s.{JArray, JObject, JSet, JString, JValue}
+import Fails._
 import transform.jsonConverter.TurnJson._
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathAST.Query
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathParser
-import transform.traits.ToJson
+import transform.common.ToJson
 import transform.utils.JsonUtil.{JValueWithPower, StringWithJsonPower}
 
 import scala.io.Source.fromResource
 
-// for implicit conf.
-////////////////////////////////////////////////////////////////////////////////
-final case class IgnoreException(b: Boolean) {
-  def apply() = b
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 trait Convert {
   def convert(root: JValue, current: JValue)
-             (implicit ignore: IgnoreException)
-  : Either[ConvertError, JValue]
+  : Either[CauseOfDenial, JValue]
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 final case class JPath(p: Query, s: String) extends ToJson {
 
-  override def toJson: JValue = JString(s"JPath($s)=AST(${p.pretty})")
+  override def toJson : JValue
+  = JString(s"JPath($s)=AST(${p.pretty})")
 
-  def apply(root: JValue, jv: JValue): Seq[JValue] = p.query(root)(jv)
-}
-
-object JPath {
-
-  def apply(p: String): Either[RuleSyntaxError, JPath] = {
-    if( p.startsWith("$") || p.startsWith("@"))
-      JsonPathParser.compile(p)
-        .left.map(RSE)
-        .map( JPath(_, p))
-    else
-      Left(RSE("not json-path"))
-  }
+  def apply(root: JValue, jv: JValue): Seq[JValue]
+  = p.query(root)(jv)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
 sealed trait TurnRoot extends ToJson with Convert {
 
   override def toJson: JValue = this match {
@@ -59,45 +40,37 @@ sealed trait TurnRoot extends ToJson with Convert {
     )
   }
 }
-final case class RootArray( path: JPath, toComposite: ToComposite) extends TurnRoot {
+final case class RootArray(path: JPath, toObj: ToObject) extends TurnRoot {
 
   override def convert(root: JValue, current: JValue)
-                      (implicit ignore: IgnoreException)
-  : Either[ConvertError, JValue] = {
+  : Either[CauseOfDenial, JArray] = {
 
     val sub = path.apply(root, current)
-    val (e0, l) = sub.map(s => toComposite.convert(s, s)).partitionMap(identity)
+    val (e0, l) = sub.map(s => toObj.convert(s, s)).partitionMap(identity)
 
-    val err0 = CVE2s(`[$>]`, e0)
-    val err1 = CVE20(`[$$]`, s"${path.s} : ${sub.length} -> empty", l)
+    val err0 = COD2s_Nel(`[$>]`, e0)
+    val err1 = COD2s_ifNone(l.headOption)(`[$$]` -> s"${path.s} : ${sub.length} -> empty")
     val err = err1 ++ err0
 
-    if( err.isEmpty || ignore())
-      Right( JArray(l.toList))
-    else
-      Left( CVEo(err))
+    Either.cond (err.isEmpty, JArray(l.toList), CODo(err) )
   }
-
 }
-final case class RootObject( path: JPath, toComposite: ToComposite) extends TurnRoot {
+final case class RootObject(path: JPath, toObj: ToObject) extends TurnRoot {
 
   override def convert(root: JValue, current: JValue)
-                      (implicit ignore: IgnoreException)
-  : Either[ConvertError, JValue] = {
+  : Either[CauseOfDenial, JObject] = {
 
     val sub = path.apply(root, current)
 
     sub.length match {
-      case 1              => toComposite.convert(sub.head, sub.head)
-      case n if !ignore() => Left(CVE(s"${`{$$}`} : too many($n)"))
-      case _              =>
-        val (_, l) = sub.map(s => toComposite.convert(s, s)).partitionMap(identity)
-        Right( JArray(l.toList))
+      case 1 => toObj.convert(sub.head, sub.head)
+      case 0 => Left( COD(s"${`{$$}`} : empty ") )
+      case n => Left( COD(s"${`{$$}`} : too many($n)") )
     }
   }
-
 }
 
+////////////////////////////////////////////////////////////////////////////////
 sealed trait MapTo extends ToJson with Convert
 
 final case class ToValue(valueOr: Either[JPath, JValue]) extends MapTo {
@@ -105,22 +78,19 @@ final case class ToValue(valueOr: Either[JPath, JValue]) extends MapTo {
   override def toJson: JValue = valueOr.fold(_.toJson, identity)
 
   override def convert(root: JValue, current: JValue)
-                      (implicit ignore: IgnoreException)
-  : Either[ConvertError, JValue] = {
+  : Either[CauseOfDenial, JValue] = {
 
-    valueOr.fold(
-      p => {
-        val js = p.apply(root, current)
-        js.length match {
-          case 0 if !ignore() => Left(CVE(s"${p.s}: not found"))
-          case 0 if ignore() => Right(JNothing)
-          case 1 => Right(js.head)
-          case n if !ignore() => Left(CVE(js.map(_.values.toString).mkString(s"${p.s}: too many($n)[", ",", "]")))
-          case n => Right(JString(js.map(_.values.toString).mkString(s"${p.s}: too many($n)[", ",", "]")))
-        }
-      },
-      Right(_)
-    )
+    valueOr.left.map( p => {
+
+      val j = p.apply(root, current)
+      def st(n: Int) = j.map(_.values.toString).mkString(s"${p.s}: too many($n)[", ",", "]")
+
+      j.length match {
+        case 1 => Right(j.head)
+        case 0 => Left( COD(s"${p.s}: not found"))
+        case n => Left( COD(st(n)))
+      }
+    } ).joinLeft
   }
 
 }
@@ -144,130 +114,108 @@ sealed trait ToComposite extends MapTo {
   }
 
 }
-final case class ToArray(path: JPath, toComposite: ToComposite) extends ToComposite {
+final case class ToArray(path: JPath, toObj: ToObject) extends ToComposite {
 
   override def convert(root: JValue, current: JValue)
-                      (implicit ignore: IgnoreException)
-  : Either[ConvertError, JValue] = {
+  : Either[CauseOfDenial, JArray] = {
 
     val sub = path(root, current)
-    val (e0, l) = sub.map(s => toComposite.convert(root, s)).partitionMap(identity)
+    val (e0, l) = sub.map(s => toObj.convert(root, s)).partitionMap(identity)
 
-    if (ignore())
-      Right(JArray(l.toList))
-    else {
+    val e1 = COD2s_cond(l.isEmpty)(`[::]` -> s"${path.s} : ${sub.length} -> empty")
+    val es = COD2s_Nel(`[=>]`, e0)
+    val err = e1 ++ es
 
-      val e1 = CVE20(`[::]`, s"${path.s} : ${sub.length} -> empty", l)
-      val es = CVE2s(`[=>]`, e0)
-      val err = e1 ++ es
-
-      if (err.isEmpty || ignore())
-        Right(JArray(l.toList))
-      else
-        Left(CVEo(err))
-    }
+    Either.cond ( err.isEmpty,
+      JArray(l.toList),
+      CODo(err)
+    )
   }
 }
 final case class ToObject(fields: List[(String, MapTo)],
-                          opt: Option[(JPath, ToComposite)] ) extends ToComposite {
+                          opt: Option[(JPath, ToObject)] ) extends ToComposite {
 
   override def convert(root: JValue, current: JValue)
-                      (implicit ignore: IgnoreException)
-  : Either[ConvertError, JValue] = {
+  : Either[CauseOfDenial, JObject] = {
 
-    val (e0, l0) = opt.toList.map{ case (p, composite) =>
+    // fields
+    val (e1, l1) =
+      fields
+        .map{ case (k, m) => m.convert(root, current).map( k -> _).left.map(  k -> _) }
+        .partitionMap(identity)
+
+    // opt. fields
+    val (e2, l2) = opt.toList.map { case (p, c) =>
+
       val sub = p(root, current)
-      val mapped = sub.length match {
-        case 0 =>
-          if(ignore()) Right(`{}`) else Left(CVE(s"${p.s} : ${sub.length} -> empty"))
-
-        case 1 if !ignore() =>
-          composite.convert(root, sub.head).fold(
-            e => Left(e),
-            j => j.asObject0().toRight( CVE(s"${p.s} : not object")) )
-
-        case n if !ignore()=>
-          Left( CVE(s"${p.s} : too many($n)"))
-
-        case _ =>
-          composite.convert(root, sub.head).fold(
-            _ => Right(`{}`),
-            j => j.asObject0().map(Right(_)).getOrElse(Right(`{}`)) )
+      val obj = sub.length match {
+        case 1 => c.convert(root, sub.head)
+        case 0 => Left( COD(s"${p.s} : ${sub.length} -> empty") )
+        case n => Left( COD(s"${p.s} : too many($n)") )
       }
-      mapped.map( _.obj)
+      obj.left.map(`{=>}`-> _).map( _.obj)
+
     }.partitionMap(identity)
 
-    val err0 = CVE2s(`{=>}`, e0)
+    val err2 = e2 ++ e1
 
-    val (e1, l1) = fields.map( kv =>
-      kv._2.convert(root, current)
-        .map( kv._1 -> _)
-        .left.map(  kv._1 -> _) ).partitionMap(identity)
-
-    val err = err0 ++ e1
-
-    if( err.isEmpty || ignore())
-      Right(JObject( l0.flatten ++ l1))
-    else
-      Left(CVEo(err))
-
+    Either.cond( err2.isEmpty,
+      JObject( l2.flatten ++ l1),
+      CODo(err2) )
   }
-
 }
 
-///////////////////////////////////////////
-object TurnJson {
+// Companion Objects
+////////////////////////////////////////////////////////////////////////////////
+object JPath {
 
-  val `{}` = JObject(Nil)
+  private val rse_not_json_path = RSE("not json-path")
+
+  def apply(p: String): Either[RuleSyntaxError, JPath] = {
+    if( p.startsWith("$") || p.startsWith("@"))
+      JsonPathParser.compile(p)
+        .left.map(RSE)
+        .map( JPath(_, p))
+    else
+      Left(rse_not_json_path)
+  }
+}
+
+object TurnJson {
 
   val `[$$]` = "[$$]"
   val `[$>]` = "[$>]"
-
   val `{$$}` = "{$$}"
   val `{$>}` = "{$>}"
-
   val `{::}` = "{::}"
   val `{=>}` = "{=>}"
-
   val `[::]` = "[::]"
   val `[=>]`  = "[=>]"
-
   val keyReserved   = Set( `[$$]`, `[$>]`, `{$$}`, `{$>}`, `{::}`, `{=>}`, `[::]`, `[=>]`)
 
-  private val err0 = RSE(s"Rule is not json-object")
+  private val rse_not_json_format = RSE("not json-format")
 
-  def apply(jv: JValue): Either[RuleSyntaxError, TurnRoot]
-  = jv.asObject0().toRight(err0).flatMap( o => TurnRoot(o))
+  def apply(jv: JValue)
+  : Either[RuleSyntaxError, TurnRoot]
+  = jv.asObject0().toRight( rse_not_json_format).flatMap( o => TurnRoot(o))
 
   // Some Util
   ////////////////////////////////////////////////////////////////////////////////
   def both[A,B]( oa: Option[A], ob: Option[B]): Option[(A, B)]
   = oa.flatMap( a => ob.map( a -> _))
 
-  def stringAndObject( jo: JObject, pathKey: String, objKey: String)
+  def hasPathAndObj(jo: JObject, pathKey: String, objKey: String)
   : Either[RuleSyntaxError,Option[(String, JObject)]]
   = {
     val pa = (jo \ pathKey).asString0()
     val ma = (jo \ objKey).asObject0()
 
-    if( 1 == ( pa.toList.size + ma.toList.size))
-      Left(RSE( "pair-key not exist :" +
+    Either.cond( 1 != (pa.toList.size + ma.toList.size),
+      both(pa, ma),
+      RSE( "pair-key not exist :" +
         pa.map(_ => pathKey).getOrElse("") +
-        ma.map(_ => objKey).getOrElse("")))
-    else
-      Right(both(pa, ma))
-  }
-
-  def compositeSub( key: (String, String), sobj: (String, JObject) )
-  : Either[List[(String, RuleSyntaxError)], (JPath, ToComposite)] = {
-
-    val p = JPath(sobj._1).left.map( key._1 -> _)
-    val c = ToComposite(sobj._2).left.map( key._2 -> _)
-
-    (p, c) match {
-      case (Right(path), Right(composite)) => Right( path -> composite)
-      case _ => Left(p.fold( List(_), _ => Nil) ++ c.fold(List(_), _ => Nil))
-    }
+        ma.map(_ => objKey).getOrElse(""))
+    )
   }
 
   // later: may need more generic version of sequence
@@ -281,26 +229,21 @@ object TurnRoot {
   private val err0 = RSE(s"(${`[$$]`}, ${`[$>]`}) or (${`{$$}`}, ${`{$>}`}) must exist")
   private val err1 = RSE(s"Only one of (${`[$$]`}, ${`[$>]`}) or (${`{$$}`}, ${`{$>}`}) is allowed.")
 
-  def apply(jo: JObject): Either[RuleSyntaxError, TurnRoot]
+  def apply(jo: JObject)
+  : Either[RuleSyntaxError, TurnRoot]
   = {
 
-    val arr = stringAndObject(jo, `[$$]`, `[$>]`)
-    val obj = stringAndObject(jo, `{$$}`, `{$>}`)
+    val arr = hasPathAndObj(jo, `[$$]`, `[$>]`)
+    val obj = hasPathAndObj(jo, `{$$}`, `{$>}`)
 
     def go( a: Option[(String, JObject)], o: Option[(String, JObject)] )
     : Either[RuleSyntaxError, TurnRoot] = {
-      (a, o) match {
-          case (None, None)       => Left( err0)
-          case (Some(_), Some(_)) => Left( err1)
-          case (Some((p, o)), None) =>
-            compositeSub(`[$$]`-> `[$>]`, p -> o)
-              .map( pc => RootArray(pc._1, pc._2))
-              .left.map( RSEo )
 
-          case (None, Some((p, o))) =>
-            compositeSub(`{$$}`-> `{$>}`, p -> o)
-              .map( pc => RootObject(pc._1, pc._2))
-              .left.map( RSEo )
+      (a, o) match {
+          case (None, None)         => Left( err0)
+          case (Some(_), Some(_))   => Left( err1)
+          case (Some((p, o)), None) => RootArray.apply( p, o)
+          case (None, Some((p, o))) => RootObject.apply( p, o)
         }
     }
 
@@ -314,16 +257,63 @@ object TurnRoot {
   }
 }
 
-object ToValue {
+object RootArray {
 
-  private def err0(st: String) = RSE(s"not allowed : $st are not allowed in ToValue")
+  def apply(p : String, o: JObject)
+  : Either[RuleSyntaxError, RootArray] = {
+
+    val p0 = JPath(p).left.map( `[$$]` -> _)
+    val c0 = ToObject(o).left.map( `[$>]` -> _)
+
+    val ra = for {
+      p <- p0
+      c <- c0
+    } yield RootArray(p, c)
+
+    ra.left.map( _ => RSEo(RSE2s_lefts( p0, c0)) )
+  }
+}
+
+object RootObject {
+  def apply(p : String, o: JObject)
+  : Either[RuleSyntaxError, RootObject] = {
+
+    val p0 = JPath(p).left.map( `{$$}` -> _)
+    val c0 = ToObject(o).left.map( `{$>}` -> _)
+
+    val ro = for{
+      p <- p0
+      c <- c0
+    } yield RootObject (p, c)
+
+    ro.left.map( _ => RSEo(RSE2s_lefts( p0, c0)) )
+  }
+
+}
+
+object MapTo {
+
+  private val err0 = RSE(s"not allowed : JArray are not allowed in MapTo field")
+
+  def apply(jv: JValue): Either[RuleSyntaxError, MapTo]
+  = jv match {
+    case JArray(_)      => Left( err0)
+    case obj@JObject(_) => ToComposite.apply(obj)
+    case other          => ToValue.apply(other)
+  }
+}
+
+object ToValue {
 
   private def st( s: String): Either[RuleSyntaxError, ToValue] =
     s.headOption match {
-      case Some('@') | Some('$')=> JPath(s).map(p => ToValue(Left(p)))
+      case Some('@')
+           | Some('$')=> JPath(s).map(p => ToValue(Left(p)))
       case Some('\\') => Right( ToValue( Right(JString(s.tail))))
-      case o => Right(ToValue(Right(JString(s))))
+      case _          => Right( ToValue( Right(JString(s))))
     }
+
+  private def err0(st: String) = RSE(s"not allowed : $st are not allowed in ToValue")
 
   def apply(jv: JValue): Either[RuleSyntaxError, ToValue]
   = jv match {
@@ -333,75 +323,29 @@ object ToValue {
     case JString(s)   => st(s)
     case o            => Right(ToValue( Right(o)))
   }
-}
 
-object MapTo {
-
-  private val err0 = RSE(s"not allowed : JArray are not allowed in MapTo field")
-
-  def apply(jv: JValue): Either[RuleSyntaxError, MapTo]
-  = jv match {
-    case JArray(_) => Left( err0)
-    case obj@JObject(_) => ToComposite.apply(obj)
-    case other => ToValue.apply(other)
-  }
 }
 
 object ToComposite {
 
-  private val err0 = RSE(s"(${`[$$]`}, ${`[$>]`}) or (${`{$$}`}, ${`{$>}`}) must exist")
-  private val err1 = RSE(s"Only one of (${`[$$]`}, ${`[$>]`}) or (${`{$$}`}, ${`{$>}`}) is allowed.")
-  private val err2 = RSE(s"When ${`[::]`} is defined, normal-fields are not allowed.")
+  private val err0 = RSE(s"Only one of (${`[$$]`}, ${`[$>]`}) or (${`{$$}`}, ${`{$>}`}) is allowed.")
+  private val err1 = RSE(s"When ${`[::]`} is defined, normal-fields are not allowed.")
 
-  private def makeToArray( fields: List[(String, JValue)],
-                           so: (String, JObject))
-  : Either[RuleSyntaxError, ToComposite]
-  = fields.isEmpty match {
-      case true  =>
-        compositeSub((`[::]` -> `[=>]`), so).fold(
-          e => Left(RSEo(e)),
-          l => Right(ToArray(l._1, l._2))
-        )
-      case false => Left( err2)
-    }
-
-  private def makeToObject( fields: List[(String, JValue)],
-                            so: Option[(String, JObject)] )
-  : Either[RuleSyntaxError, ToComposite]
-  = {
-
-    val so0 = so.map( compositeSub((`{::}` -> `{=>}`), _))
-    val opt = swap( so0)
-
-    val (lefts, rights) = fields.map( t =>
-      MapTo(t._2)
-        .left.map( t._1 -> _)
-        .map( t._1 -> _)).partitionMap(identity)
-
-    opt.fold(
-      t =>  Left(RSEo(t ++ lefts)),
-      o => if(lefts.isEmpty) Right(ToObject(rights, o)) else Left(RSEo(lefts))
-    )
-  }
-
-
-  // construct ToComposite
   ////////////////////////////////////////////////////////////////////////////////
-  def apply( jo: JObject) : Either[RuleSyntaxError, ToComposite]
-  = {
+  def apply( jo: JObject)
+  : Either[RuleSyntaxError, ToComposite] = {
+
     val fields = jo.obj.filter(kv => !keyReserved.contains(kv._1) )
 
-    val arr = stringAndObject(jo, `[::]`, `[=>]`)
-    val obj = stringAndObject(jo, `{::}`, `{=>}`)
+    val arr = hasPathAndObj(jo, `[::]`, `[=>]`)
+    val obj = hasPathAndObj(jo, `{::}`, `{=>}`)
 
-    def go( a: Option[(String, JObject)], o: Option[(String, JObject)] )
-    = {
-      val r = (a, o) match {
-        case (Some(_), Some(_)) => Left(err1)
-        case (Some(so), None) => makeToArray(fields, so)
-        case (None, so)       => makeToObject(fields, so)
-      }
-      r
+    def go( a: Option[(String, JObject)],
+            o: Option[(String, JObject)] ): Either[RuleSyntaxError, ToComposite]
+    = (a, o) match {
+      case (Some(_), Some(_)) => Left(err0)
+      case (Some(so), None)   => Either.cond( fields.isEmpty, ToArray.make(so), err1 ).flatten
+      case (None, so)         => ToObject.make(fields, so)
     }
 
     for{
@@ -410,30 +354,73 @@ object ToComposite {
       r <- go(a, o)
     } yield r
   }
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-object SpecTurnJson extends App {
-
-  val jstr = fromResource("lemon\\convert.json").mkString
-
-  ////////////////////////////////////////////////////////////////////////////////
-  val jv = jstr.toJValue
-//  println(jv)
-  val ret = TurnJson(jv)
-  println(ret.fold( _.pretty, _.pretty))
-//  ret.foreach(_.show())
-
-
-  ////////////////////////////////////////////////////////////////////////////////
-//  val path0 = "lemon\\from.json"
-//  val jstr0 = fromResource(path0).mkString
-//  val jv0 = jstr0.toJValue
-//  //////////////////////////////////////////////////////////////////////////////
-//  val tj = ret.toOption.get
-//  implicit val i: IgnoreException = IgnoreException(false)
-//  val ret0 = tj.convert(jv0, jv0)
-//
-//  println( ret0.fold( _.pretty, _.pretty))
 
 }
+
+object ToObject {
+
+  def toObjectSub( so: (String, JObject),
+                   keys: (String, String) = (`{::}`, `{=>}`) )
+  : Either[List[(String, RuleSyntaxError)], (JPath, ToObject)] = {
+
+    val p0 = JPath(so._1).left.map(  keys._1 -> _)
+    val c0 = ToObject(so._2).left.map( keys._2 -> _)
+
+    val po = p0.flatMap(p => c0.map(c => p -> c))
+
+    po.left.map(_ => RSE2s_lefts(p0, c0))
+  }
+
+  ////////////////////////////////////////////////////////////
+  def make( fields: List[(String, JValue)],
+            opt: Option[(String, JObject)] )
+  : Either[RuleSyntaxError, ToObject]
+  = {
+    val (e0, l0) =
+      fields
+        .map{ case( k, j) => MapTo(j) .left.map( k -> _) .map( k-> _)}
+        .partitionMap(identity)
+
+    val opt0 = swap( opt.map( toObjectSub(_) ))
+
+    opt0.fold(
+      t => Left(RSEo(t ++ e0)),
+      o => Either.cond( e0.isEmpty, ToObject(l0, o), RSEo(e0))
+    )
+  }
+
+  ////////////////////////////////////////////////////////////
+  def apply( jo: JObject)
+  : Either[RuleSyntaxError, ToObject] = {
+
+    val fields = jo.obj.filter(kv => !keyReserved.contains(kv._1) )
+    val obj = hasPathAndObj(jo, `{::}`, `{=>}`)
+
+    obj.flatMap ( o => make(fields, o))
+  }
+
+}
+
+object ToArray {
+
+  private val err0 = RSE(s"${`{$$}`}, ${`{$>}`} must exist")
+
+  def make(so: (String, JObject))
+  : Either[RuleSyntaxError, ToArray]
+  = ToObject.toObjectSub(so, `[::]` -> `[=>]`)
+      .left.map(RSEo)
+      .map(l => ToArray(l._1, l._2))
+
+  ////////////////////////////////////////////////////////////
+  def apply( jo: JObject)
+  : Either[RuleSyntaxError, ToArray] = {
+
+    val fields = jo.obj.filter(kv => !keyReserved.contains(kv._1) )
+    val arr = hasPathAndObj(jo, `[::]`, `[=>]`)
+
+    arr.flatMap( _.toRight( err0 ))
+      .flatMap ( so => Either.cond( fields.isEmpty, ToArray.make(so), RSE("") ))
+      .joinRight    // todo :: check
+  }
+}
+

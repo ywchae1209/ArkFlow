@@ -24,9 +24,10 @@ case class JsonClassifier(mp: Either[JObject, MultiPattern]) extends ShowStatus 
 
 object JsonClassifier {
 
-  def apply( rules: java.util.Map[Int, String], ignore: Boolean = false): JsonClassifier = {
+  def apply( rules: java.util.Map[java.lang.Integer, String], ignore: Boolean = false): JsonClassifier = {
 
-    val s = rules.asScala.toSeq
+
+    val s = rules.asScala.map( kv => kv._1.toInt -> kv._2).toSeq
     val mp = MultiPattern(s:_*)
 
     val err = if( !ignore) {

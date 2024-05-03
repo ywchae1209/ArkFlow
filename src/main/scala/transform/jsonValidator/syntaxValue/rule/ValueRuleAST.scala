@@ -1,10 +1,8 @@
 package transform.jsonValidator.syntaxValue.rule
 
-import org.json4s.{JString, JValue}
+import org.json4s.JValue
 import transform.jsonValidator._
-import transform.jsonValidator.syntaxValue.rule.PredicateMaker.UserFunctionTable
 import transform.jsonValidator.syntaxValue.rule.ValueRuleAst.FunctionOperator.eval
-import transform.utils.StringUtil.{show, wordy}
 
 object ValueRuleAst {
 
@@ -64,7 +62,7 @@ object ValueRuleAst {
             t => Right(eval(b, t, op)) )
         }
       }
-      ret.foreach( b => if(!b) wordy(s"${this.toString} == false"))
+//      ret.foreach( b => if(!b) wordy(s"${this.toString} == false"))
 
       ret
     }

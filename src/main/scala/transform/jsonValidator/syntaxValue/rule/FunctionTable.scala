@@ -25,9 +25,9 @@ case class Predicate (check: Either[SyntaxErrorValue, JPredicate ],
     {
       val ret = f(jv)
 
-      ret.left.foreach{ s =>
-        wordy( args.mkString( s"Predicate :: $name(", ", ", s") == $s : i'll judge as false"))
-      }
+//      ret.left.foreach{ s =>
+//        wordy( args.mkString( s"Predicate :: $name(", ", ", s") == $s : i'll judge as false"))
+//      }
 
       ret.fold( _ => Right(false), r => Right(r))
     } )

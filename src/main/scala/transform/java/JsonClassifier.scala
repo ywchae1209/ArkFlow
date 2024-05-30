@@ -5,7 +5,8 @@ import org.json4s.JsonAST.JObject
 import transform.jsonClassify.patternMatching.{MultiPattern, Occurrence}
 import transform.utils.JsonUtil.JValueWithPower
 
-import scala.jdk.CollectionConverters.MapHasAsScala
+import scala.jdk.CollectionConverters.{MapHasAsScala, SeqHasAsJava}
+
 
 case class JsonClassifier(mp: Either[JObject, MultiPattern]) extends ShowStatus {
 
@@ -51,8 +52,8 @@ case class ClassifyResult(ret: Either[JObject, Iterable[(Int, String, Seq[Occurr
   override def getFailReason(): String = ret.fold( _.pretty, _ => "")
   override def show(): String = ret.fold( _.pretty, _.map(_._2).mkString("[", ",", "]"))
 
-  def getIds(): List[Int] = ret.fold( _ => Nil, _.map(_._1).toList)
-  def getRules(): List[String] = ret.fold( _ => Nil, _.map(_._2).toList)
+  def getIds(): java.util.List[Integer] = ret.fold( _ => Nil, _.map(i => Integer.valueOf(i._1)).toList).asJava
+  def getRules(): java.util.List[String] = ret.fold( _ => Nil, _.map(_._2).toList).asJava
 
 }
 

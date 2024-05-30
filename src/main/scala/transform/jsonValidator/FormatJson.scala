@@ -343,7 +343,7 @@ case class FormatOptional( format: FormatJson) extends FormatJson {
   }
 
   override def ifNotExist(key: String): Either[Fails, JValue] = {
-    wordy( s"INFO [ Optional ] key-not-exist-but-ok( $key )")
+//    wordy( s"INFO [ Optional ] key-not-exist-but-ok( $key )")
     Right( optionDefault)
   }
 

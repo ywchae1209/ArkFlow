@@ -42,7 +42,7 @@ object ObjectRuleAST {
         case Eq  => num0.equiv(l, r)
         case NEq => !num0.equiv(l, r)
       }
-      wordy( s"$l $op $r :: $ret")
+//      wordy( s"$l $op $r :: $ret")
 
       ret
     }
@@ -141,7 +141,7 @@ object ObjectRuleAST {
         case Divide => div(l, r)
       }
 
-      wordy( s"$l $op $r :: $ret")
+//      wordy( s"$l $op $r :: $ret")
       ret
     }
   }
@@ -174,7 +174,7 @@ object ObjectRuleAST {
         s => default
           .map{ i =>
             val neo = fromInt(i)
-            wordy(s"$path not found, use default : $neo")
+//            wordy(s"$path not found, use default : $neo")
             neo
           }.toRight(new EvalError(s"$path => $s")),
         t => Right(t)

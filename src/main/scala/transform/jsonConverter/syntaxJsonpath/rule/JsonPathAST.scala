@@ -106,13 +106,15 @@ object JsonPathAST {
   sealed trait FilterValue extends Token {
 
     def get(root: JValue)(jv: JValue): LazyList[JValue] = this match {
+      case QueryAndFunction(q, _) => q.query(root)(jv)
       case q: Query => q.query(root)(jv)
       case Literal(jv) => LazyList(jv)
     }
 
     override def pretty: String = this match {
       case Query(p, route) => s"${p.pretty}" + route.map(_.pretty).mkString
-      case Literal(jv)     => jv.values.toString
+      case Literal(jv) => jv.values.toString
+      case QueryAndFunction(q, f) => q.pretty + f.mkString(".")
     }
   }
 
@@ -126,7 +128,16 @@ object JsonPathAST {
       val ret = route.foldLeft(s)((b, a) => b.flatMap( a.query(root) ) )
       ret
     }
+  }
 
+  ////////////////////////////////////////////////////////////////////////////////
+  final case class QueryAndFunction(q: Query, f: Option[UserFunctions]) extends FilterValue {
+
+    val functionSyntaxError: Option[String] = f.flatMap( _.functionSyntaxError)
+
+    def extract(jv: JValue) = q.extract(jv)
+    def query(root: JValue)(jv: JValue) = q.query(root)(jv)
+    def manipulate(jv: JValue) = f.map( _.executeWith(jv)).getOrElse( Right(jv))
   }
 
   final case class Literal(jv: JValue) extends FilterValue
@@ -264,6 +275,3 @@ object JsonPathAST {
   final case object Or extends BinaryBoolOp
 
 }
-
-
-

@@ -4,7 +4,7 @@ import org.json4s.{JArray, JObject, JSet, JString, JValue}
 import transform.common.ToJson
 import transform.jsonConverter.Fails._
 import transform.jsonConverter.TurnJson._
-import transform.jsonConverter.syntaxJsonpath.rule.JsonPathAST.Query
+import transform.jsonConverter.syntaxJsonpath.rule.JsonPathAST.{Query, QueryAndFunction}
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathParser
 import transform.utils.JsonUtil.JValueWithPower
 
@@ -22,6 +22,22 @@ final case class JPath(p: Query, s: String) extends ToJson {
 
   def apply(root: JValue, jv: JValue): Seq[JValue]
   = p.query(root)(jv)
+}
+
+final case class JPathAndFunction(pf: QueryAndFunction, s: String) extends ToJson {
+
+  override def toJson : JValue = JString(s"JPath(${s})=AST(${pf.pretty})")
+
+  def apply(root: JValue, jv: JValue): Seq[JValue]
+  = pf.query(root)(jv)
+
+  def manipluate(jv: JValue): Either[COD, JValue] = {
+
+    // todo :: g3nie
+    println( pf.f.mkString( jv.values.toString + " :: ", ".", ""))
+    pf.manipulate(jv)
+  }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +87,8 @@ final case class RootObject(path: JPath, toObj: ToObject) extends TurnRoot {
 ////////////////////////////////////////////////////////////////////////////////
 sealed trait MapTo extends ToJson with Convert
 
-final case class ToValue(valueOr: Either[JPath, JValue]) extends MapTo {
+// todo :: g3nie
+final case class ToValue(valueOr: Either[JPathAndFunction, JValue]) extends MapTo {
 
   override def toJson: JValue = valueOr.fold(_.toJson, identity)
 
@@ -84,7 +101,7 @@ final case class ToValue(valueOr: Either[JPath, JValue]) extends MapTo {
       def st(n: Int) = j.map(_.values.toString).mkString(s"${p.s}: too many($n)[", ",", "]")
 
       j.length match {
-        case 1 => Right(j.head)
+        case 1 => p.manipluate(j.head).left.map( s => COD(s"${p.s}: manipulate fail : $s"))
         case 0 => Left( COD(s"${p.s}: not found"))
         case n => Left( COD(st(n)))
       }
@@ -174,6 +191,22 @@ object JPath {
       JsonPathParser.compile(p)
         .left.map(RSE)
         .map( JPath(_, p))
+    else
+      Left(rse_not_json_path)
+  }
+}
+
+object JPathAndFunction {
+
+  private val rse_not_json_path = RSE("not json-path")
+
+  def apply(p: String): Either[RuleSyntaxError, JPathAndFunction] = {
+    if( p.startsWith("$") || p.startsWith("@"))
+      JsonPathParser.compilePathAndFunction(p)
+        .fold(
+          es => Left(RSE(es)),
+          qf => qf.functionSyntaxError.map(RSE).toLeft( JPathAndFunction(qf, p)) // extract syntax error
+        )
     else
       Left(rse_not_json_path)
   }
@@ -306,7 +339,7 @@ object ToValue {
   private def st( s: String): Either[RuleSyntaxError, ToValue] =
     s.headOption match {
       case Some('@')
-           | Some('$')=> JPath(s).map(p => ToValue(Left(p)))
+           | Some('$')=> JPathAndFunction.apply(s).map(p => ToValue(Left(p)))
       case Some('\\') => Right( ToValue( Right(JString(s.tail))))
       case _          => Right( ToValue( Right(JString(s))))
     }
@@ -318,8 +351,8 @@ object ToValue {
     case JObject(_)   => Left(err0("JObject"))
     case JArray(_)    => Left(err0("JArray"))
     case JSet(_)      => Left(err0("JSet"))
-    case JString(s)   => st(s)
-    case o            => Right(ToValue( Right(o)))
+    case JString(s)   => st(s)                            // jpath(and function)
+    case o            => Right(ToValue.apply( Right(o)))  // literal
   }
 
 }

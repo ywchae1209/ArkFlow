@@ -3,7 +3,7 @@
   "[$>]": {
     "{::}":                                           "$.TRT_INFO",
     "{=>}": {
-      "addItem4":                                     "@.CUSTOM4",
+      "addItem4":                                     "@.CUSTOM4::toString().replaceAllIn('[0-9]', '_').replace('_', '1').toLong()",
       "subInsuranceCd": null,
       "addItem5":                                     "@.CUSTOM5",
       "certificateDocId": null,

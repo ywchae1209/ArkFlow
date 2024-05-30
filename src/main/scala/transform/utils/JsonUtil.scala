@@ -51,20 +51,20 @@ object JsonUtil {
 
   def toLong(j: JValue): Either[String, Long]
   = j match {
-    case JString(s) => s.toLongOption.toRight(s"string($s) to Long failed")
-    case JDouble(n) => maybe(n.toLong).toRight(s"Double($n) to Long failed")
-    case JDecimal(n) => maybe(n.toLong).toRight(s"BigDecimal($n) to Long failed")
+    case JString(s) => s.toLongOption.toRight(s"String($s) can't be Long")
+    case JDouble(n) => maybe(n.toLong).toRight(s"Double($n) can't be Long")
+    case JDecimal(n) => maybe(n.toLong).toRight(s"BigDecimal($n) can't be Long")
     case JLong(n) => Right(n)
-    case JInt(n) => maybe(n.toLong).toRight(s"BigInt($n) to Long failed")
+    case JInt(n) => maybe(n.toLong).toRight(s"BigInt($n) can't be Long")
     case o => Left(s"not numeric type : $o")
   }
 
   def toBigInt(j: JValue): Either[String, BigInt]
   = j match {
-    case JString(s) => maybe(BigInt(s)).toRight(s"string($s) to BigInt failed")
-    case JDouble(n) => maybe( BigInt(n.toLong)).toRight(s"Double($n) to BigInt failed")
-    case JDecimal(n) => maybe( n.toBigInt).toRight(s"BigDecimal($n) to BigInt failed")
-    case JLong(n) => maybe(BigInt(n)).toRight(s"long($n) to BigInt failed")
+    case JString(s) => maybe(BigInt(s)).toRight(s"String($s) can't be BigInt")
+    case JDouble(n) => maybe( BigInt(n.toLong)).toRight(s"Double($n) can't be BigInt")
+    case JDecimal(n) => maybe( n.toBigInt).toRight(s"BigDecimal($n) can't be BigInt")
+    case JLong(n) => maybe(BigInt(n)).toRight(s"long($n) can't be BigInt")
     case JInt(n) => Right(n)
     case o => Left(s"not numeric type : $o")
   }
@@ -164,7 +164,7 @@ object JsonUtil {
   = asBoolean0(j).toRight(s"not Bool : $j")
 
   def asString(j: JValue) : Either[String, String]
-  = asString0(j).toRight( "not String")
+  = asString0(j).toRight( s"not String: $j")
 
   def isNothing(j: JValue) : Boolean
   = j match {

@@ -14,6 +14,7 @@ object SpecJsonPathParser extends App {
     val p: Either[String, JsonPathAST.Query] = compile(s)
 
     println("Expr: " + s)
+    println(p)
     p.foreach { s =>
       println("AST:  " + s)
       println("Show: " + s.pretty)
@@ -33,7 +34,7 @@ object SpecJsonPathParser extends App {
   }
 
   val ss = List(
-    "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)].PRS_INFO[0:]",
+    "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)].PRS_INFO[0:]::test( 1, 2, 'good', 'test' ).good('abc','def', 'this').find()",
     //    "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)]['TRT_INFO', 'ISR_INFO', 'RCPT_HEADER', 'FEE_DETAIL','PRS_INFO']",
     //    "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)]['TRT_INFO'].CUSTOM4",
     //    ".'store'.book[*].'author'",
@@ -123,7 +124,7 @@ object SpecJsonPathParser extends App {
   //  println(json.pretty)
 
 
-  println(s"fromResource: ${json.pretty}")
+//  println(s"fromResource: ${json.pretty}")
   ss.foreach(show(json))
 
 

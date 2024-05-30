@@ -3,7 +3,7 @@ package transform.jsonConverter.syntaxJsonpath.rule
 import fastparse.NoWhitespace._
 import fastparse._
 import JsonPathAST._
-import transform.utils.StringUtil.parseWith
+import transform.utils.StringUtil.{parseWith, show}
 
 
 /* ref)
@@ -13,6 +13,7 @@ import transform.utils.StringUtil.parseWith
 object JsonPathParser {
 
   def compile(s: String): Either[String, Query] = parseWith(jsonPath(_))(s)
+  def compilePathAndFunction(s: String): Either[String, QueryAndFunction] = parseWith(jsonPathAndFunction(_))(s)
 
   //////////////////////////////////////////////////
   private def sp[$: P]= P(CharsWhileIn(" \r\n\t").rep(max = 80))
@@ -158,6 +159,13 @@ object JsonPathParser {
   }
 
   ////////////////////////////////////////////////////////////////////////////////
+  private def userFunction[$: P] = P ( field ~ `(` ~ (sp ~ literal ~ sp).rep(0, ",") ~ `)`).map( UserFunction.apply)  // contains RSE
+  private def userFunctions[$: P] = P ( "::" ~ userFunction.rep(1, ".")).map(UserFunctions)
+
+  ////////////////////////////////////////////////////////////////////////////////
+
+  def jsonPathAndFunction[$: P] = P (query ~ userFunctions.? ~ End).map{
+    case (q, fs) => QueryAndFunction(q, fs) } // contain RSE
 
   def jsonPath[$: P] = P (query ~ sp ~ End)
 

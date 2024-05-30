@@ -27,8 +27,7 @@ object May {
   : Either[String, A] = {
     try Right(a)
     catch { case e: Throwable =>
-      val m = s"[ Exception ]\t$str\t::\t${e.toString}"
-      println(m)
+      val m = s"[Exception] $str ${e.toString}"
       Left(m) }
   }
 

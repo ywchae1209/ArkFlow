@@ -14,7 +14,7 @@ case class JsonClassifier(mp: Either[JObject, MultiPattern]) extends ShowStatus 
   override def getFailReason(): String = mp.fold( _.pretty, _ => "")
   override def show(): String = mp.fold( _.pretty, m => m.toString())
 
-  def search(s: String) = {
+  def search(s: String): ClassifyResult = {
     val ret = mp.map( _.search(s) )
 
     ClassifyResult(ret)

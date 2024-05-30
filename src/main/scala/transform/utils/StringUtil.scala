@@ -127,7 +127,7 @@ object StringUtil {
         Left( toFailMessage( s, p, extra))
       case _ =>
         val msg = s"Invalid expression : $s"
-//        show(msg)
+        show(msg)
         Left(msg)
     }
 

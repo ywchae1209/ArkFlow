@@ -273,18 +273,18 @@ Target-Structure는 `Convert Rule`에서 구조를 표현하는 JObject형식의
 
 주요 키워드는 아래와 같다. 
 
-| Rule-Json의 예약 Key | desc |
-|:-----------------:|-------|
-|     for Root      | 
-|       {$$}        | 원본 Json을 하나의 큰 Json-Object로 변환하자.(Target에서 추출할 내용은 `문자열값`으로 지정
-|       {$>}        | Json-Object의 내용을 만드는 방법을 지시한다.
-|       [$$]        | Target-Json을 Json-Array 변환하자.(Target에서 추출할 내용은 `문자열값`으로 지정
-|       [$>]        | 반복되는 Array의 값(Json-Object)을 만드는 방법을 지시한다.
-|  for sub-branch   |
-|       {::}        | Json노드에서 `문자열값`으로 지정된 Child를 추출하여 Json-Object를 만들자.
-|       {=>}        | Json-Object의 내용을 만드는 방법을 지시한다.
-|       [::]        | Json노드에서 `문자열값`으로 지정된 Child를 추출하여 Json-Array를 만들자.
-|       [=>]        | Child를 Json-Object의 내용을 만드는 방법을 지시한다. (만들어진 Json-Object는 Array의 항목이 된다.)
+| Rule-Json의 예약 Key | desc                                                                       |
+|:-----------------:|----------------------------------------------------------------------------|
+|     for Root      |                                                                            |
+|       {$$}        | 원본 Json을 하나의 큰 Json-Object로 변환하자.(Target에서 추출할 내용은 `문자열값`으로 지정             |
+|       {$>}        | Json-Object의 내용을 만드는 방법을 지시한다.                                             |
+|       [$$]        | Target-Json을 Json-Array 변환하자.(Target에서 추출할 내용은 `문자열값`으로 지정                 |
+|       [$>]        | 반복되는 Array의 값(Json-Object)을 만드는 방법을 지시한다.                                  |
+|  for sub-branch   |                                                                            |
+|       {::}        | Json노드에서 `문자열값`으로 지정된 Child를 추출하여 Json-Object를 만들자.                        |
+|       {=>}        | Json-Object의 내용을 만드는 방법을 지시한다.                                             |
+|       [::]        | Json노드에서 `문자열값`으로 지정된 Child를 추출하여 Json-Array를 만들자.                         |
+|       [=>]        | Child를 Json-Object의 내용을 만드는 방법을 지시한다. (만들어진 Json-Object는 Array의 항목이 된다.) |
 
 상세한 내용은 `별첨문서(convert.docx)`를 참고하도록 한다.
 
@@ -300,6 +300,79 @@ Target-Structure는 `Convert Rule`에서 구조를 표현하는 JObject형식의
   2. 구현라이브러리마다 지원기능의 편차존재( 미묘하게 다른 점 찾는 것도 일.)
 
 상세한 내용은 `별첨문서(jsonpath.docx)`를 참고하도록 한다.
+
+### Manipluate-Extracted-Value
+( 추가된 기능 )
+
+Source-Json에서 추출된 값(추출방법은 `Extract-Source` 참고)을 다음의 조작할 수 있다.
+
+
+[추출 + 조작 규칙 사례]
+```json
+
+{
+  "[$$]": "$[?(.TRT_INFO && .ISR_INFO && .RCPT_HEADER && .FEE_DETAIL && .PRS_INFO)]",
+  "[$>]": {
+    "{::}": "$.TRT_INFO",
+    "{=>}": {
+      "addItem4": "@.CUSTOM4::toString().replaceAllIn('[0-9]', '_').replace('_', '1').toLong()",
+      "subInsuranceCd": null,
+      "addItem5": "@.CUSTOM5",
+      "certificateDocId": null,
+      "treatCls": "O"
+    }
+  }
+}
+```
+
+[ 설명 ]
+
+```
+@.CUSTOM4::toString().replaceAllIn('[0-9]', '_').replace('_', '1').toLong()
+```
+
+* `@.CUSTOM4` : source의 CUSTOM4 필드의 값을 추출하라.
+* `::toString().replaceAllIn('[0-9]', '_').replace('_', '1').toLong()`  
+
+
+|             keyword             | desc                      |
+|:-------------------------------:|---------------------------|
+| `::toString()`          | 추출된 값을 문자열로 변환하라.         |
+| `.replaceAllIn('[0-9]', '_')`  | 문자열내의 숫자(regex)를 _ 로 치환하라 |
+| `.replace('_', '1')`       | 문자열내의 _를 1 로 치환하라         |
+| `.toLong()`                     | 문자열을 정수로 변환하라             |
+
+
+* 조작함수는 `::` 문자열로 시작한다.
+* 각 함수는 `.function_name(arg1, arg2)` 형식으로 연결지어 작성한다.
+* 인자에 문자열을 사용할 경우 `'문자열'`의 방식으로 작성한다.
+
+* 조작함수의 목록은 다음과 같다.
+
+|                                                                             function                                                                              | desc                      |
+|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------:|---------------------------|
+|                                                                          trim(), _trim()                                                                          | 문자열의 앞뒤 공백을 제거함 |
+|                                                                       toLower() _toLower()                                                                        | 문자열을 lowercase 로 변환함|
+|                                                                       toUpper(), _toUpper()                                                                       | 문자열을 uppercase로 변환함|
+|                                                                        toLong(), _toLong()                                                                        | 문자열을 Long-integer 로 변환함|
+|                                                                      toDouble(), _toDouble()                                                                      | 문자열을 Doube-float 로 변환함| 
+|                                                                   toLongOr(123), _toLongOr(123)                                                                   | 문자열을 Long-integer 로 변환시도하고, 실패하면 지정한 값을 반환함 ( 주의 : 입력값은 0 또는 자연수여야 함)|
+|                                                                 toDoubleOr(123), _toDoubleOr(123)                                                                 | 문자열을 Double-floa로 변환시도하고, 실패하면 지정한 값을 반환함 ( 주의 : 입력값은 0 또는 자연수여야 함)|
+|                                                                  toLongSep(','), _toLongSep(',')                                                                  | 문자열에서 인자로 준 character (예의 경우는 comma)로 3-digit씩 끊어진 값을 추출하여 정수로 변환함. ( "-12,345" ==> -12345 ) |
+|                                                                toDoubleSep(','), _toDoubleSep(',')                                                                | 문자열에서 인자로 준 character (예의 경우는 comma)로 3-digit씩 끊어진 값을 추출하여 정수로 변환함. ( "-12,345.456" ==> -12345.456 )|
+|                                                             toLongSepOr(',', 0), _toLongSepOr(',', 0)                                                             | 문자열에서 인자로 준 character (예의 경우는 comma)로 3-digit씩 끊어진 값을 추출하여 정수로 변환시도하고, 만약 실패할 경우 주어진 default값(예의 경우 0)을 반환함. ( "-12,345.456" ==> -12345.456 ) ( 주의 : default 값은 0 또는 자연수여야 함)|
+|                                                           toDoubleSepOr(',', 0), _toDoubleSepOr(',', 0)                                                           | 문자열에서 인자로 준 character (예의 경우는 comma)로 3-digit씩 끊어진 값을 추출하여 Double-float로 변환시도하고, 만약 실패할 경우 주어진 default값(예의 경우 0)을 반환함. ( "-12,345.456" ==> -12345.456 ) ( 주의 : default 값은 0 또는 자연수여야 함)|
+|                                                               subString( 1, 10), _subString( 1, 10)                                                               | 문자열에서 주어진 범위의 부분문자열을 추출함 ( index는 0부터 시작, 예의 경우는 두번째부터 열번째까지의 부분문자열을 추출함)|
+|                                                               replace('0', '_'), _replace('0', '_')                                                               |문자열에서 첫번째 인자로 주어진 부분문자열을 찾아서, 두번째 인자로 주어진 부분문자열로 치환한 문자열을 반환 (예의 경우, 0을 _ 로 바꿈 : "20240101" => "2_24_1_1" )|
+| regex( '[0-9]', '_'), _regex( '[0-9]', '_'), regexReplace( '[0-9]', '_'), _regexReplace( '[0-9]', '_'), replaceAllIn( '[0-9]', '_'), _replaceAllIn( '[0-9]', '_') | 문자열에서 첫번째 인자로 주어진 정규표현식에 대응하는 값을 찾아서, 두번째 인자로 주어진 치환한 규칙에 따라 치환한 문자열을 반환. (예의 경우, 0~9의 문자들을 _ 로 바꿈 : "2024-01-01" => "____-__-__" )** 치환규칙(두번째 인자)는 matching-group을 지정할 수 있음. ($ 키워드) : replaceAllIn 함수 사용법 참고바람.|
+|                                                                               abs()                                                                               | 숫자형의 값을 읽어서 절대값을 반환|
+|                                                                           toString(), asString()                                                                  | 문자열 형식으로 변환| 
+
+
+[ Developer Note ]
+* 발생가능한 exception은 룰 작성시의 syntax-error와 run-time시의 runtime-exception으로 구분
+* 조작함수의 실행결과는 `Either`의 형식으로 처리. ( Success or Fail)
+
 
 -----------------------
 ## for Java Developer

@@ -6,7 +6,7 @@ import transform.jsonConverter.Fails._
 import transform.jsonConverter.TurnJson._
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathAST.{Query, QueryAndFunction}
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathParser
-import transform.utils.JsonUtil.JValueWithPower
+import transform.utils.JsonUtil.{JValueWithPower, asObject0}
 
 ////////////////////////////////////////////////////////////////////////////////
 trait Convert {
@@ -32,9 +32,8 @@ final case class JPathAndFunction(pf: QueryAndFunction, s: String) extends ToJso
   = pf.query(root)(jv)
 
   def manipluate(jv: JValue): Either[COD, JValue] = {
-
     // todo :: g3nie
-    println( pf.f.mkString( jv.values.toString + " :: ", ".", ""))
+//    println( pf.f.mkString( jv.values.toString + " :: ", ".", ""))
     pf.manipulate(jv)
   }
 

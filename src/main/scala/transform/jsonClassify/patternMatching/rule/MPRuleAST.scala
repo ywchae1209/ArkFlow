@@ -1,5 +1,7 @@
 package transform.jsonClassify.patternMatching.rule
 
+import transform.utils.Location
+
 object MPRuleAST {
 
   case class RuleRoot(id: Int, rule: Rule, terms: Seq[Term], string: String)
@@ -58,16 +60,26 @@ object MPRuleAST {
     }
 
     // todo :: logic completion
-    def foldWith[T](root: Rule)(f: Int => Boolean, all: () => T): Option[T] = {
+    def foldWith[T](root: Rule)(f: Int => Seq[Location], all: () => T): Option[T] = {
+
+      def getLocation( cr: Rule, min: Int) = cr match {
+        case Term(_, _, _, id, _) => f(id).map(_.from).sorted.find( _ >= min)
+        case TermsOp(_, _, _)     => None
+      }
+
+      def checkTermSeq( child: Seq[Rule]) =
+        child.foldLeft[(Int, Boolean)](0 -> true)((b, c) => {
+          if (!b._2) b else getLocation(c, b._1).fold( b._1 -> false)( _ -> true)
+        } )._2
 
       def go(tree: Rule): Boolean = tree match {
         case TermsOp( child, kind, op) =>  kind match {
           case Or       => if (op) child.exists(go) else !child.forall(go)
           case And      => if (op) child.forall(go) else !child.exists(go)
-          case TermSeq  => if (op) child.forall(go) else !child.forall(go)
+          case TermSeq  => if (op) checkTermSeq(child) else !checkTermSeq(child)
         }
 
-        case Term( _, _, op, id, _) => if (op) f(id) else !f(id)
+        case Term( _, _, op, id, _) => if (op) f(id).nonEmpty else f(id).isEmpty
       }
 
       val ok = go(root)

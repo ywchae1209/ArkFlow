@@ -35,7 +35,7 @@ case class MultiPattern(rules: Map[Int, RuleRoot], dictionary: Trie[Term]) {
         .groupBy( _._1.root)
         .flatMap { case (root, ms: Seq[(Term, Location)]) =>
           rules.get(root).flatMap { r =>
-            val p = (i: Int) => ms.exists { case (t, l) => (t.id == i) }  // todo :: location check
+            val p = (i: Int) => ms.filter( _._1.id == i ).map( _._2)
             val f = Rule.foldWith(r.rule)(p, () => matched(ms))
             f.map( (root, r.string, _))
           }

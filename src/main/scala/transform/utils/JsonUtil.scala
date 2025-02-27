@@ -172,6 +172,11 @@ object JsonUtil {
     case _ => false
   }
 
+  def isNull(j: JValue) : Boolean
+  = j match {
+    case JNull => true
+    case _ => false
+  }
   ////////////////////////////////////////////////////////////////////////////////
   // implicits for dev.
   ////////////////////////////////////////////////////////////////////////////////
@@ -328,6 +333,8 @@ object JsonUtil {
 
     //////////////////////////////////////////////////////////////////
     def isNothing(): Boolean = JsonUtil.isNothing(j)
+    def isNull(): Boolean = JsonUtil.isNull(j)
+    def notNull(): Boolean = !JsonUtil.isNull(j)
     def notNothing(): Boolean = !isNothing()
 
     def toOption0 = if(isNothing()) None else Some(j)

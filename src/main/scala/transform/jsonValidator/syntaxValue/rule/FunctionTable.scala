@@ -125,6 +125,7 @@ object PredicateMaker {
 
   ////////////////////////////////////////////////////////////////////////////////
   private val _any        = ofString0("_any")(_ => _ => Right(true))
+  private val _notNull   = ofString0("_notNull")(_ => j => Right(j.notNull) )
 
   private val gt          = ofLong("gt", 1)( args => Calc.gt(args.head)(_) )
   private val lt          = ofLong("lt", 1)( args => Calc.lt(args.head)(_) )
@@ -141,6 +142,7 @@ object PredicateMaker {
   ////////////////////////////////////////////////////////////////////////////////
 
   private val _isString   = ofString0("_isString")(_ => Calc._isString)
+  private val _notEmptyString = ofString0("_notEmptyString")(_ => Calc._notEmptyString)
 
   private val _oneOf      = ofString0("_oneOf")(args => Calc._oneOf(args)(_))
   private val _digit      = ofString0("_digit")(args => Calc._digitOr(Nil))
@@ -172,12 +174,12 @@ object PredicateMaker {
   ////////////////////////////////////////////////////////////////////////////////
 
   val UserFunctionTable: FunctionTable = FunctionTable(
-    _any,
+    _any, _notNull,
     gt, lt, gte, lte, between,
     gt0, lt0, gte0, lte0, between0,
     _lt, _gt, _lte, _gte, _between,
     _lt0, _gt0, _lte0, _gte0, _between0,
-    _isString, _oneOf, _notOneOf, _digit, _digitOr, _charsIn, _charsNotIn,  _regex,
+    _isString, _notEmptyString, _oneOf, _notOneOf, _digit, _digitOr, _charsIn, _charsNotIn,  _regex,
     _date, _length, _longerThan, _shorterThan,
   )
 
@@ -193,6 +195,9 @@ object Calc {
 
   val _isString: JValue => Either[EvalError, Boolean]
   =  jv => getString(jv).map( _ => true)
+
+  val _notEmptyString: JValue => Either[EvalError, Boolean]
+  =  jv => getString(jv).map( _ != "" )
 
   def _oneOf(args: Seq[String]): JValue => Either[EvalError, Boolean] = (jv: JValue) => {
     getString(jv).map( s => args.contains(s))

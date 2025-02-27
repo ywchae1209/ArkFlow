@@ -137,9 +137,9 @@ final case class ToArray(path: JPath, toObj: ToObject) extends ToComposite {
     val sub = path(root, current)
     val (e0, l) = sub.map(s => toObj.convert(root, s)).partitionMap(identity)
 
-    val e1 = COD2s_cond(l.isEmpty)(`[::]` -> s"${path.s} : ${sub.length} -> empty")
+//    val e1 = COD2s_cond(l.isEmpty)(`[::]` -> s"${path.s} : ${sub.length} -> empty")
     val es = COD2s_Nel(`[=>]`, e0)
-    val err = e1 ++ es
+    val err = es //e1 ++ es
 
     Either.cond ( err.isEmpty,
       JArray(l.toList),

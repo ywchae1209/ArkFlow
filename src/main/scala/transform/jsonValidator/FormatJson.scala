@@ -339,7 +339,7 @@ object FormatObject {
 case class FormatOptional( format: FormatJson) extends FormatJson {
 
   override def evaluate(j: JValue): Either[Fails, JValue] = {
-    format.evaluate(j).orElse(Right(j))
+    format.evaluate(j)
   }
 
   override def ifNotExist(key: String): Either[Fails, JValue] = {

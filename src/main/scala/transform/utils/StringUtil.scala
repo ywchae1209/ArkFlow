@@ -16,7 +16,7 @@ object StringUtil {
   ////////////////////////////////////////////////////////////////////////////////
 
   def lift(s: String): Option[String] = if (s == null || s.isEmpty) None else Some(s)
-  def decodeUrl(s: String): Option[String] = lift(s).map( java.net.URLDecoder.decode(_, StandardCharsets.UTF_8))
+//  def decodeUrl(s: String): Option[String] = lift(s).map( java.net.URLDecoder.decode(_, StandardCharsets.UTF_8))
 
   ////////////////////////////////////////////////////////////////////////////////
   // todo :: for more readability

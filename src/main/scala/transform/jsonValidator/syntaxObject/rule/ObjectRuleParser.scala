@@ -21,6 +21,7 @@ object ObjectRuleParser {
   private def sp[$: P]= P(CharsWhileIn(" \r\n\t").rep(max = 80))
   private def `(`[$: P] = P(sp ~ "(" ~ sp)
   private def `)`[$: P] = P(sp ~ ")" ~ sp)
+  private def `&&`[$: P] = P(sp ~ "&&" ~ sp)
 
   private def cl[$: P] = P(CharPred(c => c != '}'))
   private def el[$: P] = P("\\}") // note:: if want to use "}" in key name, escape by "\\"
@@ -70,7 +71,7 @@ object ObjectRuleParser {
 
   private def paransBool[$: P]: P[BoolOps] = P(`(` ~/ or ~ `)`)
 
-  private def and[$: P]: P[BoolOps] = P(factorBool ~ ("&&".! ~ factorBool).rep).map(s => toBoolOps(s))
+  private def and[$: P]: P[BoolOps] = P(factorBool ~ (`&&`.! ~ factorBool).rep).map(s => toBoolOps(s))
 
   private def or[$: P]: P[BoolOps] = P(and ~ sp ~ ("||".! ~ and).rep).map(s => toBoolOps(s))
 

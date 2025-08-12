@@ -170,6 +170,16 @@ object UserFunction {
 
   implicit case class StringWithPower(str: String) {
 
+    def sliceBetween(prefix: String, suffix: String, ifFail: String): String = {
+      val start = str.indexOf(prefix)
+      if (start >= 0) {
+        val from = start + prefix.length
+        val end = str.indexOf(suffix, from)
+        if (end >= 0) str.substring(from, end) else ifFail
+      } else ifFail
+    }
+
+
     def sliceString(s: Int, e: Int) = {
       val len = str.length
       val s0 = if (s < 0) s + len else s
@@ -259,6 +269,25 @@ object UserFunction {
     ret
   }
 
+  def _subStringBetween(prefix: Literal, suffix: Literal, ifFail: Literal)
+  = {
+
+    val args = for {
+      p <- prefix.jv.asString()
+      s <- suffix.jv.asString()
+      f <- ifFail.jv.asString()
+    } yield (p, s, f)
+
+    val ret = args.map{ case(p, s, f) =>
+      (jv: JValue) => for{
+        j <- jv.asString()
+        r = j.sliceBetween(p, s, f)
+      } yield JString(r)
+    }
+
+    ret
+  }
+
   //  def _regexReplace( pattern: String, rep: String): JValue => Either[String, JString] = ???
 
   val abs: JValue => Either[String, JValue] = {
@@ -341,6 +370,10 @@ object UserFunction {
     "_replaceAllIn"-> arg2( _regexReplace, "_replaceAllIn(..) #arg not 2"),
 
     "_replaceIf"-> arg3( _replaceIf, "_replaceIf(..) #arg not 3"),      // added
+    "replaceIf"-> arg3( _replaceIf, "_replaceIf(..) #arg not 3"),      // added
+
+    "_subStringBetween"-> arg3( _subStringBetween, "_subStringBetween(..) #arg not 3"),      // added
+    "subStringBetween"-> arg3( _subStringBetween, "_subStringBetween(..) #arg not 3"),      // added
 
     "abs"        -> arg0( abs,      "abs() arg not empty"),
 

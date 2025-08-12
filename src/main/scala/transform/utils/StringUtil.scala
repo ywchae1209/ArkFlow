@@ -13,6 +13,26 @@ object StringUtil {
 
   private val notPermittedInJsonValue = Seq( '\b','\f','\n','\r','\t')
 
+  implicit class StringWithPower(str: String) {
+
+    def sliceBetween(prefix: String, suffix: String, ifFail: String): String = {
+      val start = str.indexOf(prefix)
+      if (start >= 0) {
+        val from = start + prefix.length
+        val end = str.indexOf(suffix, from)
+        if (end >= 0) str.substring(from, end) else ifFail
+      } else ifFail
+    }
+
+
+    def sliceString(s: Int, e: Int) = {
+      val len = str.length
+      val s0 = if (s < 0) s + len else s
+      val e0 = if (e <= 0) e + len else e
+      str.substring(s0, e0)
+    }
+  }
+
   ////////////////////////////////////////////////////////////////////////////////
 
   def lift(s: String): Option[String] = if (s == null || s.isEmpty) None else Some(s)

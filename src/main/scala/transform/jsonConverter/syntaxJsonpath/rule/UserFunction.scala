@@ -6,6 +6,7 @@ import transform.jsonConverter.Fails.COD
 import transform.jsonConverter.syntaxJsonpath.rule.JsonPathAST.Literal
 import transform.utils.JsonUtil.JValueWithPower
 import transform.utils.May.mayOr
+import transform.utils.StringUtil.StringWithPower
 
 import scala.util.matching.Regex
 
@@ -89,7 +90,7 @@ object UserFunction {
   : Either[String, JValue => Either[String, JString]]
   = {
     val f = default.jv.asString0().toRight("not valid input")   // check syntax error
-    f.map( d => (jv: JValue) => asString0(jv).orElse( Right(d)) )
+    f.map(d => (jv: JValue) => asString0(jv).orElse( Right(JString(d))) )
   }
 
   def _toLongOr(default: Literal)
@@ -166,26 +167,6 @@ object UserFunction {
       ext <- extractNumericString(sep)
       ret = ext.andThen( _.flatMap( _.toDoubleOption.map(JDouble).orElse(Some(rep)).toRight("can't be Long")) )
     } yield ret
-  }
-
-  implicit case class StringWithPower(str: String) {
-
-    def sliceBetween(prefix: String, suffix: String, ifFail: String): String = {
-      val start = str.indexOf(prefix)
-      if (start >= 0) {
-        val from = start + prefix.length
-        val end = str.indexOf(suffix, from)
-        if (end >= 0) str.substring(from, end) else ifFail
-      } else ifFail
-    }
-
-
-    def sliceString(s: Int, e: Int) = {
-      val len = str.length
-      val s0 = if (s < 0) s + len else s
-      val e0 = if (e <= 0) e + len else e
-      str.substring(s0, e0)
-    }
   }
 
     def _subString(start: Literal, end: Literal)
